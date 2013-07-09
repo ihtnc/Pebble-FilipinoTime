@@ -1,0 +1,41 @@
+{
+    "media": [
+        {
+            "trackingAdjust": 3,
+            "characterRegex": "[A-Za-z0-9.:\\s\\-]",
+            "defName": "FONT_CUTIEPATOOTIE_25",
+            "type": "font",
+            "file": "fonts/Cutie Patootie.ttf"
+        },
+        {
+            "trackingAdjust": 3,
+            "characterRegex": "[A-Za-z0-9.:\\s\\-]",
+            "defName": "FONT_CUTIEPATOOTIE_20",
+            "type": "font",
+            "file": "fonts/Cutie Patootie.ttf"
+        },
+        {
+            "trackingAdjust": 3,
+            "characterRegex": "[A-Za-z0-9.:\\s\\-]",
+            "defName": "FONT_CUTIEPATOOTIE_30",
+            "type": "font",
+            "file": "fonts/Cutie Patootie.ttf"
+        },
+        {
+            "trackingAdjust": 2,
+            "characterRegex": "[A-Za-z0-9.:\\s]",
+            "defName": "FONT_GREENTEACOOKIES_30",
+            "type": "font",
+            "file": "fonts/Greenteacookies.ttf"
+        },
+        {
+            "trackingAdjust": 3,
+            "characterRegex": "[A-Za-z0-9.:\\s]",
+            "defName": "FONT_GREENTEACOOKIES_15",
+            "type": "font",
+            "file": "fonts/Greenteacookies.ttf"
+        }
+    ],
+    "friendlyVersion": "VERSION",
+    "versionDefName": "APP_RESOURCES"
+}
