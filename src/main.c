@@ -36,24 +36,25 @@ PBL_APP_INFO(MY_UUID,
 
 Window window;
 static PblTm now;
-static GFont font_big;
-static GFont font_medium;
-static GFont font_small;
+
+#define FONT_COUNT 3
+static GFont fonts[FONT_COUNT];
+static int current_font;
 
 typedef struct
 {
 	int id;
 	Layer layer;
 	int flag;
-	GFont *font;
+	int font_size;
 	char text[BUFFER_SIZE];
 } layer_info;
 
 static layer_info layers[LAYER_COUNT] =
 {
-	{ .id = LAYER_MINUTE, .flag = 0 },
-	{ .id = LAYER_MODIFIER, .flag = 0 },
-	{ .id = LAYER_HOUR, .flag = 0 }
+	{ .id = LAYER_MINUTE, .flag = 0, .font_size = 0 },
+	{ .id = LAYER_MODIFIER, .flag = 0, .font_size = 0 },
+	{ .id = LAYER_HOUR, .flag = 0, .font_size = 0 }
 };
 
 static bool check_value(Layer *me)
@@ -84,8 +85,6 @@ static bool check_value(Layer *me)
 	
 	if (parent->id == LAYER_MINUTE)
 	{
-		parent->font = &font_big;
-		
 		if (m == 0)
 		{
 			snprintf(parent->text, BUFFER_SIZE, "Ika-%d", twelve_hour);
@@ -104,19 +103,16 @@ static bool check_value(Layer *me)
 		if(m == 0 && parent->flag != 1)
 		{
 			snprintf(parent->text, BUFFER_SIZE, "%s", "na ng");
-			parent->font = &font_big;
 			parent->flag = 1;
 		}
 		else if (first_half == true && parent->flag != 2)
 		{
 			snprintf(parent->text, BUFFER_SIZE, "makalipas ang");
-			parent->font = &font_medium;
 			parent->flag = 2;
 		}
 		else if (first_half == false && parent->flag != 3)
 		{
 			snprintf(parent->text, BUFFER_SIZE, "bago mag");
-			parent->font = &font_big;
 			parent->flag = 3;
 		}
 		else
@@ -142,7 +138,6 @@ static bool check_value(Layer *me)
 			else
 				snprintf(parent->text, BUFFER_SIZE, "ika-%d ng hating gabi", twelve_hour);
 			
-			parent->font = &font_big;
 			parent->flag = 1;
 		}
 		else if(h > 0 && h < 6 && parent->flag != 2) 
@@ -152,7 +147,6 @@ static bool check_value(Layer *me)
 			else
 				snprintf(parent->text, BUFFER_SIZE, "ika-%d ng madaling araw", twelve_hour);
 			
-			parent->font = &font_medium;
 			parent->flag = 2;
 		}
 		else if(h >= 6 && h < 12 && parent->flag != 3)
@@ -162,7 +156,6 @@ static bool check_value(Layer *me)
 			else
 				snprintf(parent->text, BUFFER_SIZE, "ika-%d ng umaga", twelve_hour);
 			
-			parent->font = &font_big;
 			parent->flag = 3;
 		}
 		else if(h == 12 && parent->flag != 4)
@@ -172,7 +165,6 @@ static bool check_value(Layer *me)
 			else
 				snprintf(parent->text, BUFFER_SIZE, "ika-%d ng tanghali", twelve_hour);
 			
-			parent->font = &font_big;
 			parent->flag = 4;
 		}
 		else if(h > 12 && h < 18 && parent->flag != 5) 
@@ -182,7 +174,6 @@ static bool check_value(Layer *me)
 			else
 				snprintf(parent->text, BUFFER_SIZE, "ika-%d ng hapon", twelve_hour);
 			
-			parent->font = &font_big;
 			parent->flag = 5;
 		}
 		else if(h >= 18 && h < 24 && parent->flag != 6)
@@ -192,7 +183,6 @@ static bool check_value(Layer *me)
 			else
 				snprintf(parent->text, BUFFER_SIZE, "ika-%d ng gabi", twelve_hour);
 			
-			parent->font = &font_big;
 			parent->flag = 6;
 		}
 		else
@@ -202,8 +192,6 @@ static bool check_value(Layer *me)
 		
 		if(m == 0)
 		{
-			parent->font = &font_big;
-			
 			//also, the succeeding minute (minute == 1) is still under the same condition as minute == 0
 			//so we need to reset the flag to force a refresh on the text
 			//this will then retrieve the "minute != 0" text
@@ -212,7 +200,6 @@ static bool check_value(Layer *me)
 	}
 	else
 	{
-		parent->font = &font_medium;
 		snprintf(parent->text, BUFFER_SIZE, "%s", "May problema");
 	}
 	
@@ -230,8 +217,44 @@ static void layer_update(Layer *const me, GContext *ctx)
 	graphics_context_set_fill_color(ctx, BACKCOLOR);
 	graphics_context_set_text_color(ctx, FORECOLOR);
 	graphics_fill_rect(ctx, GRect(0, 0, width, height), 0, 0);
+
+	parent->font_size = 0;
 	
-	graphics_text_draw(ctx, parent->text, *parent->font, GRect(0, 0, width, height), GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+	GSize content_size = 
+		graphics_text_layout_get_max_used_size
+		(
+			ctx, 
+			parent->text, 
+			fonts[parent->font_size], 
+			GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 
+			GTextOverflowModeWordWrap, 
+			GTextAlignmentCenter, 
+			NULL
+		);
+	
+	while(content_size.w > width || content_size.h > height)
+	{
+		parent->font_size++;
+		content_size = 
+			graphics_text_layout_get_max_used_size
+			(
+				ctx, 
+				parent->text, 
+				fonts[parent->font_size], 
+				GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 
+				GTextOverflowModeWordWrap, 
+				GTextAlignmentCenter, 
+				NULL
+			);
+	}
+	
+	graphics_text_draw(ctx, 
+					   parent->text, 
+					   fonts[parent->font_size], 
+					   GRect(0, 0, width, height), 
+					   GTextOverflowModeWordWrap, 
+					   GTextAlignmentCenter,
+					   NULL);
 }
 
 static void handle_tick(AppContextRef ctx, PebbleTickEvent *const event)
@@ -256,16 +279,18 @@ void handle_init(AppContextRef ctx)
 	
 	resource_init_current_app(&APP_RESOURCES);
 	
-	font_big = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_30));
-	font_medium = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_25));
-	font_small = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_20));
-	
+	for (int x = 0; x < FONT_COUNT; x++)
+	{
+		if (x == 0) fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_30));
+		else if (x == 1) fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_25));
+		else if (x == 2) fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_20));
+		else fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_30));
+	}
+		
 	get_time(&now);
 	
 	for (int i = 0; i < LAYER_COUNT; i++)
 	{
-		layers[i].font = &font_medium;
-		
 		/*
 		The layers are initially 1/3 of the screen
 		Layer 1 height is adjusted to -20px
@@ -297,8 +322,11 @@ void handle_init(AppContextRef ctx)
 static void handle_deinit(AppContextRef ctx)
 {
 	(void) ctx;
-	fonts_unload_custom_font(font_big);
-	fonts_unload_custom_font(font_small);
+	
+	for (int x = 0; x < FONT_COUNT; x++)
+	{
+		fonts_unload_custom_font(fonts[x]);
+	}
 }
 
 void pbl_main(void *params) 
