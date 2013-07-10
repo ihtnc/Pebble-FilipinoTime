@@ -3,6 +3,8 @@
 #include "pebble_fonts.h"
 #include "mini-printf.h"
 
+//#define DEBUG
+	
 #define SCREEN_HEIGHT 168
 #define SCREEN_WIDTH 144
 #define BACKCOLOR GColorBlack
@@ -22,7 +24,12 @@
 	
 #define MY_UUID { 0x47, 0x1F, 0x4C, 0xDC, 0x27, 0x8C, 0x4C, 0xDB, 0x91, 0x52, 0xBE, 0x0E, 0x48, 0xF4, 0x66, 0x17 }
 PBL_APP_INFO(MY_UUID,
-             "Filipino Time", "ihopethisnamecounts",
+			  #ifndef DEBUG
+               "Filipino Time",
+             #else
+               "FilipinoTime-debug",
+             #endif
+			 "ihopethisnamecounts",
              1, 0, /* App version */
              DEFAULT_MENU_ICON,
              APP_INFO_WATCH_FACE);
@@ -51,18 +58,29 @@ static layer_info layers[LAYER_COUNT] =
 
 static bool check_value(Layer *me)
 {
-	int h = now.tm_hour;
-	int m = now.tm_min;
+	layer_info *parent = container_of(me, layer_info, layer);
+	
+	#ifndef DEBUG
+		int h = now.tm_hour;
+		int m = now.tm_min;
+	#else
+		int h = now.tm_min % 24;
+		int m = now.tm_sec;
+	#endif
 	
 	bool first_half = m < 40;
-	if (first_half == false) h = h + 1;
+	if (first_half == false) 
+	{
+		h = h + 1;
+		
+		//we moved the hour forward, so force a refresh of the text
+		if(parent->id == LAYER_HOUR) parent->flag = 0;
+	}
 	
 	int twelve_hour = h % 12;
 	if (twelve_hour == 0) twelve_hour = 12;
 	
 	bool has_changed = true;
-	
-	layer_info *parent = container_of(me, layer_info, layer);
 	
 	if (parent->id == LAYER_MINUTE)
 	{
@@ -107,7 +125,16 @@ static bool check_value(Layer *me)
 		}
 	}
 	else if(parent->id == LAYER_HOUR)
-	{			
+	{
+		if(m == 0)
+		{
+			//"minute == 0" text only happens once per hour
+			//and since the previous minute (minute == 59) is still under the same condition as the current hour,
+			//we need to reset the flag to force a refresh on the text
+			//this will then retrieve the "minute != 0" text
+			parent->flag = 0;
+		}
+		
 		if(h == 0 && parent->flag != 1) 
 		{
 			if(m == 0)
@@ -177,9 +204,8 @@ static bool check_value(Layer *me)
 		{
 			parent->font = &font_big;
 			
-			//"minute == 0" text only happens once per hour
-			//and since the succeeding minute (minute == 1) is still under the same condition as minute == 0,
-			//we need to reset the flag to force a refresh on the text
+			//also, the succeeding minute (minute == 1) is still under the same condition as minute == 0
+			//so we need to reset the flag to force a refresh on the text
 			//this will then retrieve the "minute != 0" text
 			parent->flag = 0;
 		}
@@ -284,7 +310,12 @@ void pbl_main(void *params)
 		.tick_info      = 
 		{
 			.tick_handler = &handle_tick,
-			.tick_units = MINUTE_UNIT
+			
+			#ifndef DEBUG
+				.tick_units = MINUTE_UNIT
+			#else
+				.tick_units = SECOND_UNIT
+			#endif
 		},
 	};
 	app_event_loop(params, &handlers);
