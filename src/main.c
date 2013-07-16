@@ -5,10 +5,10 @@
 
 /* START: OPTIONS */
 //#define DEBUG
-#define BACKCOLOR GColorBlack
-#define FORECOLOR GColorWhite
 #define ENABLE_BLINK true
 #define INCLUDE_HOLIDAY true
+#define BACKCOLOR GColorBlack
+#define FORECOLOR GColorWhite
 #define SPLASH_DELAY 2000
 #define COUNT_UP_CUTOVER 40
 /* END: OPTIONS */
@@ -131,9 +131,18 @@ typedef struct
 	int d;
 } date;
 
+static int current_day;
+bool is_holiday;
+
 static bool get_holiday_text(int layer_id, char *text)
 {
-	bool is_holiday = false;
+	if(current_day == now.tm_mday && is_holiday == false)
+	{
+		return false;
+	}
+	
+	current_day = now.tm_mday;	
+	is_holiday = false;
 	
 	if (now.tm_mon == JAN && now.tm_mday == 1) 
 	{
@@ -770,12 +779,17 @@ static void handle_tick(AppContextRef ctx, PebbleTickEvent *const event)
 			do
 			{
 				now.tm_mday = now.tm_mday - daysInMonth;
-				now.tm_mon = now.tm_mon + 1;
+				
 				if(now.tm_mon == DEC) 
 				{
 					now.tm_mon = JAN;
 					now.tm_year = now.tm_year + 1;
 				}
+				else 
+				{
+					now.tm_mon = now.tm_mon + 1;
+				}
+				
 				daysInMonth = numDaysInMonth(now.tm_mon, now.tm_year);	
 			}
 			while(now.tm_mday > daysInMonth);			
@@ -784,17 +798,31 @@ static void handle_tick(AppContextRef ctx, PebbleTickEvent *const event)
 		{
 			do
 			{
-				now.tm_mon = now.tm_mon - 1;
 				if(now.tm_mon == JAN)
 				{
 					now.tm_mon = DEC;
 					now.tm_year = now.tm_year - 1;
 				}
+				else
+				{
+					now.tm_mon = now.tm_mon - 1;
+				}
+				
 				daysInMonth = numDaysInMonth(now.tm_mon, now.tm_year);
 				now.tm_mday = now.tm_mday + daysInMonth;
 			}
 			while(now.tm_mday < 0);	
 		}
+	}
+
+	static void add_hours(const int hours)
+	{
+		add_minutes(hours * 60);
+	}
+
+	static void add_days(const int days)
+	{
+		add_hours(days * 24);
 	}
 
 	void handle_up_single_click(ClickRecognizerRef recognizer, Window *window) 
@@ -803,6 +831,16 @@ static void handle_tick(AppContextRef ctx, PebbleTickEvent *const event)
 		manual_handle_tick();
 	}
 	
+	void handle_up_multi_click(ClickRecognizerRef recognizer, Window *window) 
+	{
+		const uint16_t count = click_number_of_clicks_counted(recognizer);
+		if(count == 2) add_hours(1);
+		else if(count == 3) add_days(1);
+		else add_minutes(1);
+		
+		manual_handle_tick();
+	}
+
 	void handle_select_single_click(ClickRecognizerRef recognizer, Window *window) 
 	{
 		get_time(&now);
@@ -810,8 +848,18 @@ static void handle_tick(AppContextRef ctx, PebbleTickEvent *const event)
 	}
 	
 	void handle_down_single_click(ClickRecognizerRef recognizer, Window *window) 
-	{	
+	{			
 		add_minutes(-1);
+		manual_handle_tick();
+	}
+
+	void handle_down_multi_click(ClickRecognizerRef recognizer, Window *window) 
+	{
+		const uint16_t count = click_number_of_clicks_counted(recognizer);
+		if(count == 2) add_hours(-1);
+		else if(count == 3) add_days(-1);
+		else add_minutes(-1);
+		
 		manual_handle_tick();
 	}
 
@@ -820,8 +868,18 @@ static void handle_tick(AppContextRef ctx, PebbleTickEvent *const event)
 		config[BUTTON_ID_UP]->click.handler = (ClickHandler) handle_up_single_click;
 		config[BUTTON_ID_UP]->click.repeat_interval_ms = 250;
 		
+		config[BUTTON_ID_UP]->multi_click.handler = (ClickHandler) handle_up_multi_click;
+  		config[BUTTON_ID_UP]->multi_click.min = 2;
+  		config[BUTTON_ID_UP]->multi_click.max = 3;
+  		config[BUTTON_ID_UP]->multi_click.last_click_only = true;
+		
 		config[BUTTON_ID_DOWN]->click.handler = (ClickHandler) handle_down_single_click;
 		config[BUTTON_ID_DOWN]->click.repeat_interval_ms = 250;	
+		
+		config[BUTTON_ID_DOWN]->multi_click.handler = (ClickHandler) handle_down_multi_click;
+  		config[BUTTON_ID_DOWN]->multi_click.min = 2;
+  		config[BUTTON_ID_DOWN]->multi_click.max = 3;
+  		config[BUTTON_ID_DOWN]->multi_click.last_click_only = true;
 		
 		config[BUTTON_ID_SELECT]->click.handler = (ClickHandler) handle_select_single_click;
 	}
@@ -884,6 +942,9 @@ void handle_init(AppContextRef ctx)
 	}
 	
 	get_time(&now);
+	current_day = 0;
+	is_holiday = false;
+	
 	show_splash();
 }
 
