@@ -1,39 +1,37 @@
 {
     "media": [
         {
+            "defName": "IMAGE_MENU_ICON",
+            "type": "png",
+            "file": "images/menu_icon.png"
+        },
+        {
             "trackingAdjust": 3,
-            "characterRegex": "[A-Za-z0-9.:\\s\\-]",
+            "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
             "defName": "FONT_CUTIEPATOOTIE_25",
             "type": "font",
             "file": "fonts/Cutie Patootie.ttf"
         },
         {
             "trackingAdjust": 3,
-            "characterRegex": "[A-Za-z0-9.:\\s\\-]",
+            "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
             "defName": "FONT_CUTIEPATOOTIE_20",
             "type": "font",
             "file": "fonts/Cutie Patootie.ttf"
         },
         {
             "trackingAdjust": 3,
-            "characterRegex": "[A-Za-z0-9.:\\s\\-]",
+            "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
             "defName": "FONT_CUTIEPATOOTIE_30",
             "type": "font",
             "file": "fonts/Cutie Patootie.ttf"
         },
         {
-            "trackingAdjust": 2,
-            "characterRegex": "[A-Za-z0-9.:\\s]",
-            "defName": "FONT_GREENTEACOOKIES_30",
-            "type": "font",
-            "file": "fonts/Greenteacookies.ttf"
-        },
-        {
             "trackingAdjust": 3,
-            "characterRegex": "[A-Za-z0-9.:\\s]",
-            "defName": "FONT_GREENTEACOOKIES_15",
+            "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
+            "defName": "FONT_CUTIEPATOOTIE_40",
             "type": "font",
-            "file": "fonts/Greenteacookies.ttf"
+            "file": "fonts/Cutie Patootie.ttf"
         }
     ],
     "friendlyVersion": "VERSION",
