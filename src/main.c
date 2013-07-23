@@ -2,7 +2,21 @@
 #include "pebble_app.h"
 #include "pebble_fonts.h"
 #include "mini-printf.h"
+#include "monitor.h"
 
+/* 
+Because of the way that httpebble works, a different UUID is needed for Android and iOS compatibility. 
+If you are building this to use with Android, then leave the #define ANDROID line alone, and if 
+you're building for iOS then remove or comment out that line.
+*/
+
+//#define ANDROID
+#ifdef ANDROID
+	#define MY_UUID { 0x91, 0x41, 0xB6, 0x28, 0xBC, 0x89, 0x49, 0x8E, 0xB1, 0x47, 0x10, 0x34, 0xBF, 0xBE, 0x12, 0x98 }
+#else
+	#define MY_UUID HTTP_UUID
+#endif
+	
 /* START: OPTIONS */
 //#define DEBUG
 #define ENABLE_BLINK true
@@ -13,7 +27,6 @@
 #define COUNT_UP_CUTOVER 40
 /* END: OPTIONS */
 
-#define MY_UUID { 0x47, 0x1F, 0x4C, 0xDC, 0x27, 0x8C, 0x4C, 0xDB, 0x91, 0x52, 0xBE, 0x0E, 0x48, 0xF4, 0x66, 0x17 }
 PBL_APP_INFO(MY_UUID,
 			 #ifndef DEBUG
                "Filipino Time",
@@ -21,7 +34,7 @@ PBL_APP_INFO(MY_UUID,
                "Debug: FilipinoTime",
              #endif
 			 "ihopethisnamecounts",
-             1, 2, /* App version */
+             1, 4, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON,
 			 #ifndef DEBUG
                APP_INFO_WATCH_FACE
@@ -734,6 +747,7 @@ static void manual_handle_tick()
 	}
 	
 	blink_screen();
+	ping();
 }
 
 static void handle_tick(AppContextRef ctx, PebbleTickEvent *const event)
@@ -945,6 +959,7 @@ void handle_init(AppContextRef ctx)
 	current_day = 0;
 	is_holiday = false;
 	
+	monitor_init(ctx); 
 	show_splash();
 }
 
@@ -972,7 +987,14 @@ void pbl_main(void *params)
 				.tick_units = MINUTE_UNIT
 			},
 		#endif
-		
+		.messaging_info = 
+		{
+			.buffer_sizes = 
+			{
+				.inbound = 124,
+				.outbound = 256
+			}
+		},
 		.timer_handler = &handle_timer
 	};
 	app_event_loop(params, &handlers);
