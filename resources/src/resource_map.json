@@ -10,28 +10,28 @@
             "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
             "defName": "FONT_CUTIEPATOOTIE_25",
             "type": "font",
-            "file": "fonts/Cutie Patootie.ttf"
+            "file": "fonts/CutiePatootie.ttf"
         },
         {
             "trackingAdjust": 3,
             "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
             "defName": "FONT_CUTIEPATOOTIE_20",
             "type": "font",
-            "file": "fonts/Cutie Patootie.ttf"
+            "file": "fonts/CutiePatootie.ttf"
         },
         {
             "trackingAdjust": 3,
             "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
             "defName": "FONT_CUTIEPATOOTIE_30",
             "type": "font",
-            "file": "fonts/Cutie Patootie.ttf"
+            "file": "fonts/CutiePatootie.ttf"
         },
         {
             "trackingAdjust": 3,
             "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
             "defName": "FONT_CUTIEPATOOTIE_40",
             "type": "font",
-            "file": "fonts/Cutie Patootie.ttf"
+            "file": "fonts/CutiePatootie.ttf"
         }
     ],
     "friendlyVersion": "VERSION",

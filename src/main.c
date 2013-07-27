@@ -3,38 +3,23 @@
 #include "pebble_fonts.h"
 #include "mini-printf.h"
 #include "monitor.h"
-
+#include "app_info.h"
+#include "app_options.h"
+	
 /* 
 Because of the way that httpebble works, a different UUID is needed for Android and iOS compatibility. 
 If you are building this to use with Android, then leave the #define ANDROID line alone, and if 
 you're building for iOS then remove or comment out that line.
 */
 
-//#define ANDROID
 #ifdef ANDROID
 	#define MY_UUID { 0x91, 0x41, 0xB6, 0x28, 0xBC, 0x89, 0x49, 0x8E, 0xB1, 0x47, 0x10, 0x34, 0xBF, 0xBE, 0x12, 0x98 }
 #else
 	#define MY_UUID HTTP_UUID
 #endif
 	
-/* START: OPTIONS */
-//#define DEBUG
-#define ENABLE_BLINK true
-#define INCLUDE_HOLIDAY true
-#define BACKCOLOR GColorBlack
-#define FORECOLOR GColorWhite
-#define SPLASH_DELAY 2000
-#define COUNT_UP_CUTOVER 40
-/* END: OPTIONS */
-
-PBL_APP_INFO(MY_UUID,
-			 #ifndef DEBUG
-               "Filipino Time",
-             #else
-               "Debug: FilipinoTime",
-             #endif
-			 "ihopethisnamecounts",
-             1, 4, /* App version */
+PBL_APP_INFO(MY_UUID, APP_NAME, APP_AUTHOR,
+             APP_VER_MAJOR, APP_VER_MINOR, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON,
 			 #ifndef DEBUG
                APP_INFO_WATCH_FACE
@@ -42,9 +27,6 @@ PBL_APP_INFO(MY_UUID,
                APP_INFO_STANDARD_APP
              #endif             
 			);
-	
-#define SCREEN_HEIGHT 168
-#define SCREEN_WIDTH 144
 	
 #define LAYER_COUNT 3
 #define LAYER_MINUTE 0
@@ -571,15 +553,17 @@ static void layer_update(Layer *const me, GContext *ctx)
 	graphics_context_set_fill_color(ctx, BACKCOLOR);
 	graphics_context_set_text_color(ctx, FORECOLOR);
 	graphics_fill_rect(ctx, GRect(0, 0, width, height), 0, 0);
-
-	//start with the largest font
-	//try to calculate the resulting size of the layer given the text and the font
-	//if the size is greater than the bounds of the layer,
-	//    go to the next largest font
-	//    this is the reason why the fonts are ordered in a descending manner on the font array
-	parent->font_size = 0;
 	
-	GSize content_size = 
+	if(DYNAMIC_FONT_SIZE == true)
+	{
+		//start with the largest font
+		//try to calculate the resulting size of the layer given the text and the font
+		//if the size is greater than the bounds of the layer,
+		//    go to the next largest font
+		//    this is the reason why the fonts are ordered in a descending manner on the font array
+		parent->font_size = 0;
+			
+		GSize content_size = 
 		graphics_text_layout_get_max_used_size
 		(
 			ctx, 
@@ -591,25 +575,31 @@ static void layer_update(Layer *const me, GContext *ctx)
 			NULL
 		);
 	
-	while(content_size.w > width || content_size.h > height)
-	{
-		parent->font_size++;
-		content_size = 
-			graphics_text_layout_get_max_used_size
-			(
-				ctx, 
-				parent->text, 
-				fonts[parent->font_size], 
-				GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 
-				GTextOverflowModeWordWrap, 
-				GTextAlignmentCenter, 
-				NULL
-			);
+		while(content_size.w > width || content_size.h > height)
+		{
+			parent->font_size++;
+			content_size = 
+				graphics_text_layout_get_max_used_size
+				(
+					ctx, 
+					parent->text, 
+					fonts[parent->font_size], 
+					GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 
+					GTextOverflowModeWordWrap, 
+					GTextAlignmentCenter, 
+					NULL
+				);
+		}
 	}
-	
+	else
+	{
+		//show the second to the smallest font
+		parent->font_size = 2;
+	}
+		
 	graphics_text_draw(ctx, 
 					   parent->text, 
-					   fonts[parent->font_size], 
+					   fonts[parent->font_size],
 					   GRect(0, 0, width, height), 
 					   GTextOverflowModeWordWrap, 
 					   GTextAlignmentCenter,
@@ -689,22 +679,19 @@ static void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cook
 		animation.is_animating = false;
 		app_timer_cancel_event(ctx, handle);
 		
-		if(is_splash_showing == true) 
+		if(is_splash_showing == true) is_splash_showing = false;
+		
+		//blink animation has just ended
+		//so draw the main watch face even if the minute did not tick yet
+		//this is to clear the previous screen and show the time immediately
+		get_time_value(&now);
+		
+		for (int i = 0; i < LAYER_COUNT; i++) 
 		{
-			is_splash_showing = false;
-			
-			//splash animation has just ended
-			//so draw the main watch face even if the minute did not tick yet
-			//this is to clear the splash text and show the time
-			get_time_value(&now);
-			
-			for (int i = 0; i < LAYER_COUNT; i++) 
+			bool has_changed = check_text(&layers[i].layer);
+			if (has_changed == true) 
 			{
-				bool has_changed = check_text(&layers[i].layer);
-				if (has_changed == true) 
-				{
-					if (animation.is_animating == false) layer_mark_dirty(&layers[i].layer);
-				}
+				if (animation.is_animating == false) layer_mark_dirty(&layers[i].layer);
 			}
 		}
 		
@@ -737,15 +724,6 @@ static void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cook
 
 static void manual_handle_tick()
 {
-	for (int i = 0; i < LAYER_COUNT; i++) 
-	{
-		bool has_changed = check_text(&layers[i].layer);
-		if (has_changed == true) 
-		{
-			if (animation.is_animating == false) layer_mark_dirty(&layers[i].layer);
-		}
-	}
-	
 	blink_screen();
 	ping();
 }
@@ -919,7 +897,7 @@ void handle_init(AppContextRef ctx)
 		if (x == 0) fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_40));
 		else if (x == 1) fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_30));
 		else if (x == 2) fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_25));
-		else if (x == 2) fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_20));
+		else if (x == 3) fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_20));
 		else fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_40));
 	}
 	
