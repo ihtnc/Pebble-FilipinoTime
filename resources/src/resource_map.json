@@ -1,21 +1,9 @@
 {
     "media": [
         {
-            "defName": "IMAGE_MENU_ICON",
-            "type": "png",
-            "file": "images/menu_icon.png"
-        },
-        {
             "trackingAdjust": 3,
             "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
-            "defName": "FONT_CUTIEPATOOTIE_25",
-            "type": "font",
-            "file": "fonts/CutiePatootie.ttf"
-        },
-        {
-            "trackingAdjust": 3,
-            "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
-            "defName": "FONT_CUTIEPATOOTIE_20",
+            "defName": "FONT_CUTIEPATOOTIE_40",
             "type": "font",
             "file": "fonts/CutiePatootie.ttf"
         },
@@ -29,9 +17,21 @@
         {
             "trackingAdjust": 3,
             "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
-            "defName": "FONT_CUTIEPATOOTIE_40",
+            "defName": "FONT_CUTIEPATOOTIE_20",
             "type": "font",
             "file": "fonts/CutiePatootie.ttf"
+        },
+        {
+            "trackingAdjust": 3,
+            "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
+            "defName": "FONT_CUTIEPATOOTIE_25",
+            "type": "font",
+            "file": "fonts/CutiePatootie.ttf"
+        },
+        {
+            "defName": "IMAGE_MENU_ICON",
+            "type": "png",
+            "file": "images/menu_icon.png"
         }
     ],
     "friendlyVersion": "VERSION",

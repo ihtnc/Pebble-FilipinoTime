@@ -175,6 +175,15 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "kalayaan!");
 		else is_holiday = false;
 	}
+	else if (now.tm_mon == AUG && now.tm_mday == 21)
+	{
+		is_holiday = true; // Ninoy Aquino's day
+		
+		if(layer_id == LAYER_MINUTE) snprintf(text, BUFFER_SIZE, "%s", "ngayon ay");
+		else if(layer_id == LAYER_MODIFIER) snprintf(text, BUFFER_SIZE, "%s", "araw ni");
+		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "Ninoy!");
+		else is_holiday = false;
+	}
 	else if (now.tm_mon == AUG && now.tm_mday == 26)
 	{
 		is_holiday = true; // National heroes day
@@ -186,7 +195,7 @@ static bool get_holiday_text(int layer_id, char *text)
 	}
 	else if (now.tm_mon == NOV && now.tm_mday == 1)
 	{
-		is_holiday = true; // All souls day
+		is_holiday = true; // All saints day
 		
 		if(layer_id == LAYER_MINUTE) snprintf(text, BUFFER_SIZE, "%s", "ngayon ay");
 		else if(layer_id == LAYER_MODIFIER) snprintf(text, BUFFER_SIZE, "%s", "araw ng mga");
@@ -195,7 +204,7 @@ static bool get_holiday_text(int layer_id, char *text)
 	}
 	else if (now.tm_mon == NOV && now.tm_mday == 2)
 	{
-		is_holiday = true; // All saints day
+		is_holiday = true; // All souls day
 		
 		if(layer_id == LAYER_MINUTE) snprintf(text, BUFFER_SIZE, "%s", "ngayon ay");
 		else if(layer_id == LAYER_MODIFIER) snprintf(text, BUFFER_SIZE, "%s", "araw ng mga");
