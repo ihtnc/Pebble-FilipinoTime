@@ -8,7 +8,10 @@
 #define INVERT false
 #define SPLASH_DELAY 2000
 #define COUNT_UP_CUTOVER 40
-
+	
+//Frequency is in minutes
+#define PING_FREQUENCY 5
+	
 #if INVERT == true
 	#define BACKCOLOR GColorWhite
 	#define FORECOLOR GColorBlack

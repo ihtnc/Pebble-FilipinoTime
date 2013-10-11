@@ -946,7 +946,7 @@ void handle_init(AppContextRef ctx)
 	current_day = 0;
 	is_holiday = false;
 	
-	monitor_init(ctx); 
+	monitor_init(ctx, PING_FREQUENCY); 
 	show_splash();
 }
 
