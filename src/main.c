@@ -1,145 +1,30 @@
-#include "pebble_os.h"
-#include "pebble_app.h"
-#include "pebble_fonts.h"
-#include "mini-printf.h"
-#include "monitor.h"
-#include "app_info.h"
-#include "app_options.h"
-	
-/* 
-Because of the way that httpebble works, a different UUID is needed for Android and iOS compatibility. 
-If you are building this to use with Android, then leave the #define ANDROID line alone, and if 
-you're building for iOS then remove or comment out that line.
-*/
+#include "pebble.h"
+#include "main.h"
+#include "btmonitor.h"
+#include "thincfg.h"
+#include "calendar.h"
+#include "options.h"
 
-#ifdef ANDROID
-	#define MY_UUID { 0x91, 0x41, 0xB6, 0x28, 0xBC, 0x89, 0x49, 0x8E, 0xB1, 0x47, 0x10, 0x34, 0xBF, 0xBE, 0x12, 0x98 }
-#else
-	#define MY_UUID HTTP_UUID
-#endif
-	
-PBL_APP_INFO(MY_UUID, APP_NAME, APP_AUTHOR,
-             APP_VER_MAJOR, APP_VER_MINOR, /* App version */
-             RESOURCE_ID_IMAGE_MENU_ICON,
-			 #ifndef DEBUG
-               APP_INFO_WATCH_FACE
-             #else
-               APP_INFO_STANDARD_APP
-             #endif             
-			);
-	
-#define LAYER_COUNT 3
-#define LAYER_MINUTE 0
-#define LAYER_MODIFIER 1
-#define LAYER_HOUR 2
-	
-#define BUFFER_SIZE 32
-#define container_of(ptr, type, member) \
-	({ \
-		char *__mptr = (char *)(uintptr_t) (ptr); \
-		(type *)(__mptr - offsetof(type,member) ); \
-	 })
-
-#define SUN 0
-#define MON 1
-#define TUE 2
-#define WED 3
-#define THU 4
-#define FRI 5
-#define SAT 6
-
-#define JAN 0
-#define FEB 1
-#define MAR 2
-#define APR 3
-#define MAY 4
-#define JUN 5
-#define JUL 6
-#define AUG 7
-#define SEP 8
-#define OCT 9
-#define NOV 10
-#define DEC 11
-
-Window window;
-static PblTm now;
-
-#define FONT_COUNT 4
-static GFont fonts[FONT_COUNT];
-static int current_font;
-const char *hour_text[12] = 
-{
-	"alas dose", "ala una", "alas dos", "alas tres", 
-	"alas kwatro", "alas singko", "alas sais", "alas siyete", 
-	"alas otso", "alas nwebe", "alas diyes", "alas onse"
-};
-	
-typedef struct
-{
-	const int id;
-	Layer layer;
-	int flag;
-	int font_size;
-	char text[BUFFER_SIZE];
-} layer_info;
-
-static layer_info layers[LAYER_COUNT] =
-{
-	{ .id = LAYER_MINUTE, .flag = 0, .font_size = 0 },
-	{ .id = LAYER_MODIFIER, .flag = 0, .font_size = 0 },
-	{ .id = LAYER_HOUR, .flag = 0, .font_size = 0 }
-};
-
-static const char *splash_text[LAYER_COUNT] = 
-{
-	"Created by",
-	"ihtnc",
-	"(c) 2013 FilipinoTime"
-};
-
-typedef struct
-{
-	bool is_animating;
-	uint32_t duration;
-	Layer blank_layer;
-	bool flags[5];
-	bool current_flag;
-	int index;
-	AppContextRef bctx;
-} blink_info;
-
-static blink_info animation =
-{
-	.duration = 200,
-	.current_flag = false,
-	.index = 0,
-	.is_animating = false,
-	.flags = {true, false, true, false, true}
-};
-
-static bool is_splash_showing;
-
-typedef struct 
-{
-	int y;
-	int m;
-	int d;
-} date;
+static Window *window;
+static AppTimer *timer;
+static struct tm *now;
 
 static int current_day;
-bool is_holiday;
+static bool is_holiday;
 
+static void handle_timer(void *data);
+	
 static bool get_holiday_text(int layer_id, char *text)
 {
-	if(current_day == now.tm_mday && is_holiday == false)
+	if(current_day == now->tm_mday && is_holiday == false)
 	{
 		return false;
 	}
 	
-	current_day = now.tm_mday;	
+	current_day = now->tm_mday;	
 	is_holiday = false;
 	
-	if (now.tm_mon == JAN && now.tm_mday == 1) 
+	if (now->tm_mon == JAN && now->tm_mday == 1) 
 	{
 		is_holiday = true; // New year's day
 		
@@ -148,7 +33,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "taon!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == APR && now.tm_mday == 9)
+	else if (now->tm_mon == APR && now->tm_mday == 9)
 	{
 		is_holiday = true; // Day of valor
 		
@@ -157,7 +42,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "kagitingan!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == MAY && now.tm_mday == 1) 
+	else if (now->tm_mon == MAY && now->tm_mday == 1) 
 	{
 		is_holiday = true; // Labor day
 		
@@ -166,7 +51,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "manggagawa!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == JUN && now.tm_mday == 12)
+	else if (now->tm_mon == JUN && now->tm_mday == 12)
 	{
 		is_holiday = true; // Independence day
 		
@@ -175,7 +60,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "kalayaan!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == AUG && now.tm_mday == 21)
+	else if (now->tm_mon == AUG && now->tm_mday == 21)
 	{
 		is_holiday = true; // Ninoy Aquino's day
 		
@@ -184,7 +69,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "Ninoy!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == AUG && now.tm_mday == 26)
+	else if (now->tm_mon == AUG && now->tm_mday == 26)
 	{
 		is_holiday = true; // National heroes day
 		
@@ -193,7 +78,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "bayani!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == NOV && now.tm_mday == 1)
+	else if (now->tm_mon == NOV && now->tm_mday == 1)
 	{
 		is_holiday = true; // All saints day
 		
@@ -202,7 +87,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "santo!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == NOV && now.tm_mday == 2)
+	else if (now->tm_mon == NOV && now->tm_mday == 2)
 	{
 		is_holiday = true; // All souls day
 		
@@ -211,7 +96,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "patay!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == NOV && now.tm_mday == 30)
+	else if (now->tm_mon == NOV && now->tm_mday == 30)
 	{
 		is_holiday = true; // Bonifacio day
 		
@@ -220,7 +105,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "Bonifacio!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == DEC && now.tm_mday == 24) 
+	else if (now->tm_mon == DEC && now->tm_mday == 24) 
 	{
 		is_holiday = true; // Christmas eve
 		
@@ -229,7 +114,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "pasko!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == DEC && now.tm_mday == 25) 
+	else if (now->tm_mon == DEC && now->tm_mday == 25) 
 	{
 		is_holiday = true; // Christmas day
 		
@@ -238,7 +123,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "pasko!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == DEC && now.tm_mday == 30) 
+	else if (now->tm_mon == DEC && now->tm_mday == 30) 
 	{
 		is_holiday = true; // Rizal day
 		
@@ -247,7 +132,7 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "Rizal!");
 		else is_holiday = false;
 	}
-	else if (now.tm_mon == DEC && now.tm_mday == 31) 
+	else if (now->tm_mon == DEC && now->tm_mday == 31) 
 	{
 		is_holiday = true; // New year's eve
 		
@@ -256,14 +141,14 @@ static bool get_holiday_text(int layer_id, char *text)
 		else if(layer_id == LAYER_HOUR) snprintf(text, BUFFER_SIZE, "%s", "bagong taon!");
 		else is_holiday = false;
 	}
-	else if((now.tm_mon == MAR && now.tm_mday >= 19)
-			|| (now.tm_mon == APR && now.tm_mday <= 25)) 
+	else if((now->tm_mon == MAR && now->tm_mday >= 19)
+			|| (now->tm_mon == APR && now->tm_mday <= 25)) 
 	{
 		//calculate easter sunday and from there calculate maundy thursday and good friday
 		//easter can never occur before March 22 or later than April 25
 		//so this condition should cover from March 19 (earliest possible maundy thursday)
 		
-		int year = now.tm_year + 1900;
+		int year = now->tm_year + 1900;
 		int cen = year % 19;
 		int leap = year % 4;
 		int days = year % 7;
@@ -271,44 +156,44 @@ static bool get_holiday_text(int layer_id, char *text)
 		int temp2 = (2 * leap + 4 * days + 6 * temp1 + 5) % 7;
 		int easter = 22 + temp1 + temp2;
 		
-		date easter_sun;
+		struct tm easter_sun;
 		//min easter = 22
 		//max easter = 56
 		if (easter > 31) 
 		{
-			easter_sun.y = now.tm_year;
-			easter_sun.m = APR;
-			easter_sun.d = (easter - 31);
+			easter_sun.tm_year = now->tm_year;
+			easter_sun.tm_mon = APR;
+			easter_sun.tm_mday = (easter - 31);
 		}
 		else
 		{
-			easter_sun.y = now.tm_year;
-			easter_sun.m = MAR;
-			easter_sun.d = easter;
+			easter_sun.tm_year = now->tm_year;
+			easter_sun.tm_mon = MAR;
+			easter_sun.tm_mday = easter;
 		}
 		
-		date maundy_thu = 
+		struct tm maundy_thu = 
 		{
-			.y = easter_sun.y,
-			.m = (easter_sun.d - 3 >= 1) ? easter_sun.m : MAR,
-			.d = (easter_sun.d - 3 >= 1) ? easter_sun.d - 3 : (31 + easter_sun.d - 3)
+			.tm_year = easter_sun.tm_year,
+			.tm_mon = (easter_sun.tm_mday - 3 >= 1) ? easter_sun.tm_mon : MAR,
+			.tm_mday = (easter_sun.tm_mday - 3 >= 1) ? easter_sun.tm_mday - 3 : (31 + easter_sun.tm_mday - 3)
 		};
 		
-		date good_fri = 
+		struct tm good_fri = 
 		{
-			.y = easter_sun.y,
-			.m = (easter_sun.d - 2 >= 1) ? easter_sun.m : MAR,
-			.d = (easter_sun.d - 2 >= 1) ? easter_sun.d - 2 : (31 + easter_sun.d - 2)
+			.tm_year = easter_sun.tm_year,
+			.tm_mon = (easter_sun.tm_mday - 2 >= 1) ? easter_sun.tm_mon : MAR,
+			.tm_mday = (easter_sun.tm_mday - 2 >= 1) ? easter_sun.tm_mday - 2 : (31 + easter_sun.tm_mday - 2)
 		};
 		
-		date black_sat = 
+		struct tm black_sat = 
 		{
-			.y = easter_sun.y,
-			.m = (easter_sun.d - 1 >= 1) ? easter_sun.m : MAR,
-			.d = (easter_sun.d - 1 >= 1) ? easter_sun.d - 1 : (31 + easter_sun.d - 1)
+			.tm_year = easter_sun.tm_year,
+			.tm_mon = (easter_sun.tm_mday - 1 >= 1) ? easter_sun.tm_mon : MAR,
+			.tm_mday = (easter_sun.tm_mday - 1 >= 1) ? easter_sun.tm_mday - 1 : (31 + easter_sun.tm_mday - 1)
 		};
 		
-		if(now.tm_mon == maundy_thu.m && now.tm_mday == maundy_thu.d)
+		if(now->tm_mon == maundy_thu.tm_mon && now->tm_mday == maundy_thu.tm_mday)
 		{
 			is_holiday = true; // Maundy thursday
 			
@@ -321,7 +206,7 @@ static bool get_holiday_text(int layer_id, char *text)
 			else
 				is_holiday = false;
 		}
-		else if(now.tm_mon == good_fri.m && now.tm_mday == good_fri.d)
+		else if(now->tm_mon == good_fri.tm_mon && now->tm_mday == good_fri.tm_mday)
 		{
 			is_holiday = true; // Good friday
 			
@@ -334,7 +219,7 @@ static bool get_holiday_text(int layer_id, char *text)
 			else
 				is_holiday = false;
 		}	
-		else if(now.tm_mon == black_sat.m && now.tm_mday == black_sat.d)
+		else if(now->tm_mon == black_sat.tm_mon && now->tm_mday == black_sat.tm_mday)
 		{
 			is_holiday = true; // Black saturday
 			
@@ -356,10 +241,10 @@ static bool check_text(Layer *me)
 {
 	layer_info *parent = container_of(me, layer_info, layer);
 	
-	int h = now.tm_hour;
-	int m = now.tm_min;
+	int h = now->tm_hour;
+	int m = now->tm_min;
 	
-	bool first_half = m < COUNT_UP_CUTOVER;
+	bool first_half = m < get_count_up_cutover_value();
 	if (first_half == false) 
 	{
 		h = (h + 1) % 24;
@@ -377,12 +262,13 @@ static bool check_text(Layer *me)
 	
 	bool has_changed = true;
 	bool is_holiday = false;
+	bool include_holiday = get_include_holiday_value();
 	
 	if (parent->id == LAYER_MINUTE)
 	{
 		if (m == 0) 
 		{
-			if(INCLUDE_HOLIDAY == true)
+			if(include_holiday == true)
 				is_holiday = get_holiday_text(parent->id, parent->text);
 			
 			if(is_holiday == false)
@@ -395,7 +281,7 @@ static bool check_text(Layer *me)
 	{
 		if(m == 0 && parent->flag != 1)
 		{
-			if(INCLUDE_HOLIDAY == true)
+			if(include_holiday == true)
 				is_holiday = get_holiday_text(parent->id, parent->text);
 			
 			if(is_holiday == false)
@@ -430,7 +316,7 @@ static bool check_text(Layer *me)
 		{
 			if(m == 0) 
 			{
-				if(INCLUDE_HOLIDAY == true)
+				if(include_holiday == true)
 					is_holiday = get_holiday_text(parent->id, parent->text);
 			
 				if(is_holiday == false)
@@ -447,7 +333,7 @@ static bool check_text(Layer *me)
 		{
 			if(m == 0) 
 			{
-				if(INCLUDE_HOLIDAY == true)
+				if(include_holiday == true)
 					is_holiday = get_holiday_text(parent->id, parent->text);
 			
 				if(is_holiday == false)
@@ -464,7 +350,7 @@ static bool check_text(Layer *me)
 		{
 			if(m == 0) 
 			{
-				if(INCLUDE_HOLIDAY == true)
+				if(include_holiday == true)
 					is_holiday = get_holiday_text(parent->id, parent->text);
 			
 				if(is_holiday == false)
@@ -483,7 +369,7 @@ static bool check_text(Layer *me)
 		{
 			if(m == 0) 
 			{
-				if(INCLUDE_HOLIDAY == true)
+				if(include_holiday == true)
 					is_holiday = get_holiday_text(parent->id, parent->text);
 			
 				if(is_holiday == false)
@@ -499,7 +385,7 @@ static bool check_text(Layer *me)
 		{
 			if(m == 0) 
 			{
-				if(INCLUDE_HOLIDAY == true)
+				if(include_holiday == true)
 					is_holiday = get_holiday_text(parent->id, parent->text);
 			
 				if(is_holiday == false)
@@ -518,7 +404,7 @@ static bool check_text(Layer *me)
 		{
 			if(m == 0)
 			{
-				if(INCLUDE_HOLIDAY == true)
+				if(include_holiday == true)
 					is_holiday = get_holiday_text(parent->id, parent->text);
 			
 				if(is_holiday == false)
@@ -551,19 +437,30 @@ static bool check_text(Layer *me)
 	return has_changed;
 }
 
-static void layer_update(Layer *const me, GContext *ctx)
+static void layer_update(struct Layer *me, GContext *ctx)
 {
 	(void) ctx;
 	
 	layer_info *parent = container_of(me, layer_info, layer);
 	
-	const int width = me->bounds.size.w;
-	const int height = me->bounds.size.h;
-	graphics_context_set_fill_color(ctx, BACKCOLOR);
-	graphics_context_set_text_color(ctx, FORECOLOR);
+	GRect bounds = layer_get_bounds(me);
+	const int width = bounds.size.w;
+	const int height = bounds.size.h;
+	
+	if(get_invert_screen_value() == true)
+	{
+		graphics_context_set_fill_color(ctx, GColorBlack);
+		graphics_context_set_text_color(ctx, GColorWhite);
+	}
+	else
+	{
+		graphics_context_set_fill_color(ctx, GColorWhite);
+		graphics_context_set_text_color(ctx, GColorBlack);
+	}
+	
 	graphics_fill_rect(ctx, GRect(0, 0, width, height), 0, 0);
 	
-	if(DYNAMIC_FONT_SIZE == true)
+	if(get_dynamic_font_size_value() == true)
 	{
 		//start with the largest font
 		//try to calculate the resulting size of the layer given the text and the font
@@ -605,8 +502,8 @@ static void layer_update(Layer *const me, GContext *ctx)
 		//show the second to the smallest font
 		parent->font_size = 2;
 	}
-		
-	graphics_text_draw(ctx, 
+	
+	graphics_draw_text(ctx, 
 					   parent->text, 
 					   fonts[parent->font_size],
 					   GRect(0, 0, width, height), 
@@ -615,11 +512,21 @@ static void layer_update(Layer *const me, GContext *ctx)
 					   NULL);
 }
 
-static void blank_layer_update(Layer *const me, GContext *ctx)
+static void blank_layer_update(struct Layer *me, GContext *ctx)
 {
-	graphics_context_set_fill_color(ctx, BACKCOLOR);
-	graphics_context_set_text_color(ctx, FORECOLOR);
-	graphics_fill_rect(ctx, GRect(0, 0, me->bounds.size.w,  me->bounds.size.h), 0, 0);
+	if(get_invert_screen_value() == true)
+	{
+		graphics_context_set_fill_color(ctx, GColorBlack);
+		graphics_context_set_text_color(ctx, GColorWhite);
+	}
+	else
+	{
+		graphics_context_set_fill_color(ctx, GColorWhite);
+		graphics_context_set_text_color(ctx, GColorBlack);
+	}
+	
+	GRect bounds = layer_get_bounds(me);
+	graphics_fill_rect(ctx, GRect(0, 0, bounds.size.w, bounds.size.h), 0, 0);
 }
 
 static void show_splash()
@@ -635,33 +542,35 @@ static void show_splash()
 	animation.current_flag = false;
 	animation.index = 0;
 	animation.is_animating = true;
-	app_timer_send_event(animation.bctx, SPLASH_DELAY, 0);
+	timer = app_timer_register(SPLASH_DELAY, handle_timer, NULL);
 }
 
 static void blink_screen()
 {
-	if (ENABLE_BLINK == false) return;
+	if (get_enable_blink_value() == false) return;
 	if (animation.is_animating == true) return;
 	
 	animation.current_flag = false;
 	animation.index = 0;
 	animation.is_animating = true;
-	app_timer_send_event(animation.bctx, animation.duration, 0);
+	timer = app_timer_register(animation.duration, handle_timer, NULL);
 }
 
-static void get_time_value(PblTm *time)
+static void get_time_value(struct tm *local)
 {
-	(void) *time;
+	(void) local;
 	
 	#ifndef DEBUG
-		get_time(time);
+		//time_t now;
+		time_t temp;
+		time(&temp);
+		local = localtime(&temp);
 	#else
-		now.tm_year = 113;
-		now.tm_mon = DEC;
-		now.tm_mday = 30;
-		now.tm_min = 59;
-		now.tm_hour = 8;
-		time = &now;
+		local.tm_year = 113;
+		local.tm_mon = DEC;
+		local.tm_mday = 30;
+		local.tm_min = 59;
+		local.tm_hour = 8;
 	#endif
 }
 
@@ -671,36 +580,37 @@ static void get_time_value(PblTm *time)
 //at the end of the flag list, stop the animation
 //    if the animation is for the splash screen,
 //        force a redraw of the the main screen since the minute tick may still be a while
-static void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie)
+static void handle_timer(void *data)
 {
+	app_timer_cancel(timer);
+	
 	if(animation.index >= (int) sizeof(animation.flags)) 
 	{
 		if(animation.current_flag == true) 
 		{
-			layer_remove_child_layers(&window.layer);
+			layer_remove_child_layers(window_get_root_layer(window));
 			
 			for (int i = 0; i < LAYER_COUNT; i++) 
 			{
-				layer_add_child(&window.layer, &layers[i].layer);
+				layer_add_child(window_get_root_layer(window), layers[i].layer);
 			}
 		}
 		
 		animation.is_animating = false;
-		app_timer_cancel_event(ctx, handle);
 		
 		if(is_splash_showing == true) is_splash_showing = false;
 		
 		//blink animation has just ended
 		//so draw the main watch face even if the minute did not tick yet
 		//this is to clear the previous screen and show the time immediately
-		get_time_value(&now);
+		get_time_value(now);
 		
 		for (int i = 0; i < LAYER_COUNT; i++) 
 		{
-			bool has_changed = check_text(&layers[i].layer);
+			bool has_changed = check_text(layers[i].layer);
 			if (has_changed == true) 
 			{
-				if (animation.is_animating == false) layer_mark_dirty(&layers[i].layer);
+				if (animation.is_animating == false) layer_mark_dirty(layers[i].layer);
 			}
 		}
 		
@@ -713,119 +623,41 @@ static void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cook
 			
 		if(animation.current_flag == true)
 		{
-			layer_remove_child_layers(&window.layer);
-			layer_add_child(&window.layer, &animation.blank_layer);
+			layer_remove_child_layers(window_get_root_layer(window));
+			layer_add_child(window_get_root_layer(window), animation.blank_layer);
 		}
 		else
 		{
-			layer_remove_child_layers(&window.layer);
+			layer_remove_child_layers(window_get_root_layer(window));
 			
 			for (int i = 0; i < LAYER_COUNT; i++) 
 			{
-				layer_add_child(&window.layer, &layers[i].layer);
+				layer_add_child(window_get_root_layer(window), layers[i].layer);
 			}
 		}
 	}
 	
 	animation.index++;
-	app_timer_send_event(animation.bctx, animation.duration, cookie);
+	timer = app_timer_register(animation.duration, handle_timer, NULL);
 }
 
 static void manual_handle_tick()
 {
 	blink_screen();
-	ping();
 }
 
-static void handle_tick(AppContextRef ctx, PebbleTickEvent *const event)
+static void handle_tick(struct tm *tick_time, TimeUnits units_changed) 
 {
 	if(is_splash_showing == true) return;
-	
-	(void) ctx;
-		
+			
 	#ifndef DEBUG
-		now = *event->tick_time;
+		now = tick_time;
 		manual_handle_tick();
 	#endif
 }
 
 #ifdef DEBUG
-	static bool isLeapYear(int year) 
-	{
-		year = year + 1900;
-		return (((year%4 == 0) && (year%100 != 0)) || (year%400 == 0));
-	}
 	
-	static int numDaysInMonth(const int month, const int year) 
-	{
-		static const int nDays[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
-		
-		return nDays[month] + (month == FEB)*isLeapYear(year);
-	}
-
-	static void add_minutes(const int minutes)
-	{
-		int value = (now.tm_min + minutes);
-		now.tm_min = (60 + value) % 60;
-	 	value = value / 60 - (value < 0 && value % 60 != 0 ? 1 : 0); //because -value/60 seems to rounds down to -inf instead of 0
-		
-		value = (now.tm_hour + value);
-		now.tm_hour = (24 + value) % 24;
-		value = value / 24 - (value < 0 && value % 24 != 0 ? 1 : 0); //because -value/24 seems to  rounds down to -inf instead of 0
-		
-		now.tm_mday = now.tm_mday + value;
-		int daysInMonth = numDaysInMonth(now.tm_mon, now.tm_year);
-		if(now.tm_mday > daysInMonth)
-		{
-			do
-			{
-				now.tm_mday = now.tm_mday - daysInMonth;
-				
-				if(now.tm_mon == DEC) 
-				{
-					now.tm_mon = JAN;
-					now.tm_year = now.tm_year + 1;
-				}
-				else 
-				{
-					now.tm_mon = now.tm_mon + 1;
-				}
-				
-				daysInMonth = numDaysInMonth(now.tm_mon, now.tm_year);	
-			}
-			while(now.tm_mday > daysInMonth);			
-		}
-		else if(now.tm_mday < 0)
-		{
-			do
-			{
-				if(now.tm_mon == JAN)
-				{
-					now.tm_mon = DEC;
-					now.tm_year = now.tm_year - 1;
-				}
-				else
-				{
-					now.tm_mon = now.tm_mon - 1;
-				}
-				
-				daysInMonth = numDaysInMonth(now.tm_mon, now.tm_year);
-				now.tm_mday = now.tm_mday + daysInMonth;
-			}
-			while(now.tm_mday < 0);	
-		}
-	}
-
-	static void add_hours(const int hours)
-	{
-		add_minutes(hours * 60);
-	}
-
-	static void add_days(const int days)
-	{
-		add_hours(days * 24);
-	}
-
 	void handle_up_single_click(ClickRecognizerRef recognizer, Window *window) 
 	{	
 		add_minutes(1);
@@ -866,40 +698,47 @@ static void handle_tick(AppContextRef ctx, PebbleTickEvent *const event)
 
 	void config_provider(ClickConfig **config, Window *window) 
 	{
-		config[BUTTON_ID_UP]->click.handler = (ClickHandler) handle_up_single_click;
-		config[BUTTON_ID_UP]->click.repeat_interval_ms = 250;
+		//config[BUTTON_ID_UP]->click.handler = (ClickHandler) handle_up_single_click;
+		//config[BUTTON_ID_UP]->click.repeat_interval_ms = 250;
 		
-		config[BUTTON_ID_UP]->multi_click.handler = (ClickHandler) handle_up_multi_click;
-  		config[BUTTON_ID_UP]->multi_click.min = 2;
-  		config[BUTTON_ID_UP]->multi_click.max = 3;
-  		config[BUTTON_ID_UP]->multi_click.last_click_only = true;
+		//config[BUTTON_ID_UP]->multi_click.handler = (ClickHandler) handle_up_multi_click;
+  		//config[BUTTON_ID_UP]->multi_click.min = 2;
+  		//config[BUTTON_ID_UP]->multi_click.max = 3;
+  		//config[BUTTON_ID_UP]->multi_click.last_click_only = true;
 		
-		config[BUTTON_ID_DOWN]->click.handler = (ClickHandler) handle_down_single_click;
-		config[BUTTON_ID_DOWN]->click.repeat_interval_ms = 250;	
+		//config[BUTTON_ID_DOWN]->click.handler = (ClickHandler) handle_down_single_click;
+		//config[BUTTON_ID_DOWN]->click.repeat_interval_ms = 250;	
 		
-		config[BUTTON_ID_DOWN]->multi_click.handler = (ClickHandler) handle_down_multi_click;
-  		config[BUTTON_ID_DOWN]->multi_click.min = 2;
-  		config[BUTTON_ID_DOWN]->multi_click.max = 3;
-  		config[BUTTON_ID_DOWN]->multi_click.last_click_only = true;
+		//config[BUTTON_ID_DOWN]->multi_click.handler = (ClickHandler) handle_down_multi_click;
+  		//config[BUTTON_ID_DOWN]->multi_click.min = 2;
+  		//config[BUTTON_ID_DOWN]->multi_click.max = 3;
+  		//config[BUTTON_ID_DOWN]->multi_click.last_click_only = true;
 		
-		config[BUTTON_ID_SELECT]->click.handler = (ClickHandler) handle_select_single_click;
+		//config[BUTTON_ID_SELECT]->click.handler = (ClickHandler) handle_select_single_click;
 	}
 #endif
-	
-void handle_init(AppContextRef ctx)
+
+static void window_unload(Window *window) 
 {
-	(void)ctx;
+	thincfg_deinit();
+	btmonitor_deinit();
+
+	tick_timer_service_unsubscribe();
+	app_timer_cancel(timer);
+	free(timer);	
 	
-	window_init(&window, "Main");
+	for (int x = 0; x < FONT_COUNT; x++)
+	{
+		fonts_unload_custom_font(fonts[x]);
+	}
 	
-	#ifdef DEBUG
-		window_set_fullscreen(&window, true);
-		window_set_click_config_provider(&window, (ClickConfigProvider) config_provider);
-	#endif
-		
-	window_stack_push(&window, true /* Animated */);
+	layer_destroy(animation.blank_layer);
 	
-	resource_init_current_app(&APP_RESOURCES);
+}
+
+static void window_load(Window *window) 
+{
+	tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
 	
 	for (int x = 0; x < FONT_COUNT; x++)
 	{
@@ -910,9 +749,11 @@ void handle_init(AppContextRef ctx)
 		else fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_40));
 	}
 	
-	layer_init(&animation.blank_layer, GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT));
-	layer_set_update_proc(&animation.blank_layer, blank_layer_update);
-	animation.bctx = ctx;
+	thincfg_init();
+	btmonitor_init(get_bt_notification_value());
+	
+	animation.blank_layer = layer_create(GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT));
+	layer_set_update_proc(animation.blank_layer, blank_layer_update);
 	
 	for (int i = 0; i < LAYER_COUNT; i++)
 	{
@@ -934,55 +775,50 @@ void handle_init(AppContextRef ctx)
 		else if(i == LAYER_MODIFIER) frame = GRect(0, (SCREEN_HEIGHT / LAYER_COUNT) - 20, SCREEN_WIDTH, (SCREEN_HEIGHT / LAYER_COUNT));
 		else if(i == LAYER_HOUR) frame = GRect(0, (2 * SCREEN_HEIGHT / LAYER_COUNT) - 20, SCREEN_WIDTH, (SCREEN_HEIGHT / LAYER_COUNT) + 20);
 		else frame = GRect(0, i * (SCREEN_HEIGHT / LAYER_COUNT), SCREEN_WIDTH, (SCREEN_HEIGHT / LAYER_COUNT));
-			
-		layer_init(&layers[i].layer, frame);
-		layer_set_update_proc(&layers[i].layer, layer_update);
-		layer_add_child(&window.layer, &layers[i].layer);		
+		
+		layers[i].layer = layer_create(frame);
+		layer_set_update_proc(layers[i].layer, layer_update);
+		layer_add_child(window_get_root_layer(window), layers[i].layer);		
 		
 		layers[i].flag = 0;		
 	}
 	
-	get_time(&now);
+	time_t temp;
+	time(&temp);
+	now = localtime(&temp);
 	current_day = 0;
 	is_holiday = false;
 	
-	monitor_init(ctx, PING_FREQUENCY); 
 	show_splash();
 }
 
-static void handle_deinit(AppContextRef ctx)
+static void handle_init()
 {
-	(void) ctx;
+	window = window_create();
+	window_set_window_handlers(window, 
+							   (WindowHandlers)
+							   {
+								   .load = window_load,
+								   .unload = window_unload,
+							   });
+	window_set_background_color(window, GColorBlack);
 	
-	for (int x = 0; x < FONT_COUNT; x++)
-	{
-		fonts_unload_custom_font(fonts[x]);
-	}
+	#ifdef DEBUG
+		window_set_fullscreen(window, true);
+		//window_set_click_config_provider(window, (ClickConfigProvider) config_provider);
+	#endif
+		
+	window_stack_push(window, true);
 }
 
-void pbl_main(void *params) 
+static void handle_deinit()
 {
-	PebbleAppHandlers handlers = 
-	{
-		.init_handler = &handle_init,
-		.deinit_handler = &handle_deinit,
-		
-		#ifndef DEBUG
-			.tick_info = 
-			{
-				.tick_handler = &handle_tick,
-				.tick_units = MINUTE_UNIT
-			},
-		#endif
-		.messaging_info = 
-		{
-			.buffer_sizes = 
-			{
-				.inbound = 124,
-				.outbound = 256
-			}
-		},
-		.timer_handler = &handle_timer
-	};
-	app_event_loop(params, &handlers);
+	window_destroy(window);
+}
+
+int main(void) 
+{
+	handle_init();
+	app_event_loop();
+	handle_deinit();
 }

@@ -1,0 +1,61 @@
+{
+    "versionLabel": "2.0",
+    "uuid": "529e0e9d-5ea9-404c-94c1-42343d3b5f07",
+    "appKeys": {
+        "dynamic_font_size": 2,
+        "count_up_cutover": 5,
+        "include_holiday": 0,
+        "bt_notification": 3,
+        "enable_blink": 1,
+        "action": 6,
+        "invert_screen": 4
+    },
+    "longName": "Pebble-FilipinoTime",
+    "versionCode": 1,
+    "capabilities": [
+        "configurable"
+    ],
+    "shortName": "FilipinoTime",
+    "companyName": "ihopethisnamecounts",
+    "watchapp": {
+        "watchface": false
+    },
+    "resources": {
+        "media": [
+            {
+                "menuIcon": true,
+                "type": "png",
+                "name": "IMAGE_MENU_ICON",
+                "file": "images/menu_icon.png"
+            },
+            {
+                "trackingAdjust": 3,
+                "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
+                "type": "font",
+                "name": "FONT_CUTIEPATOOTIE_40",
+                "file": "fonts/CutiePatootie.ttf"
+            },
+            {
+                "trackingAdjust": 3,
+                "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
+                "type": "font",
+                "name": "FONT_CUTIEPATOOTIE_30",
+                "file": "fonts/CutiePatootie.ttf"
+            },
+            {
+                "trackingAdjust": 3,
+                "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
+                "type": "font",
+                "name": "FONT_CUTIEPATOOTIE_20",
+                "file": "fonts/CutiePatootie.ttf"
+            },
+            {
+                "trackingAdjust": 3,
+                "characterRegex": "[A-Za-z0-9.:\\s\\-\\(\\)!]",
+                "type": "font",
+                "name": "FONT_CUTIEPATOOTIE_25",
+                "file": "fonts/CutiePatootie.ttf"
+            }
+        ]
+    }
+}
