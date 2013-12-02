@@ -21,7 +21,7 @@
 #define FONT_COUNT 4
 GFont fonts[FONT_COUNT];
 int current_font;
-const char *hour_text[12] = 
+char *hour_text[12] = 
 {
 	"alas dose", "ala una", "alas dos", "alas tres", 
 	"alas kwatro", "alas singko", "alas sais", "alas siyete", 
@@ -30,21 +30,21 @@ const char *hour_text[12] =
 	
 typedef struct
 {
-	const int id;
+	int id;
 	Layer *layer;
 	int flag;
 	int font_size;
-	char text[BUFFER_SIZE];
+	char *text;
 } layer_info;
 
 layer_info layers[LAYER_COUNT] =
 {
-	{ .id = LAYER_MINUTE, .flag = 0, .font_size = 0 },
-	{ .id = LAYER_MODIFIER, .flag = 0, .font_size = 0 },
-	{ .id = LAYER_HOUR, .flag = 0, .font_size = 0 }
+	{ .id = LAYER_MINUTE, .flag = 0, .font_size = 0, .text = " " },
+	{ .id = LAYER_MODIFIER, .flag = 0, .font_size = 0, .text = " " },
+	{ .id = LAYER_HOUR, .flag = 0, .font_size = 0, .text = " " }
 };
 
-const char *splash_text[LAYER_COUNT] = 
+char *splash_text[LAYER_COUNT] = 
 {
 	"Created by",
 	"ihtnc",

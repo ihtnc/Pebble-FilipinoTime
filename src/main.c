@@ -243,7 +243,7 @@ static bool check_text(Layer *me)
 	
 	int h = now->tm_hour;
 	int m = now->tm_min;
-	
+
 	bool first_half = m < get_count_up_cutover_value();
 	if (first_half == false) 
 	{
@@ -458,7 +458,7 @@ static void layer_update(struct Layer *me, GContext *ctx)
 		graphics_context_set_text_color(ctx, GColorBlack);
 	}
 	
-	graphics_fill_rect(ctx, GRect(0, 0, width, height), 0, 0);
+	graphics_fill_rect(ctx, GRect(0, 0, width, height), 0, GCornerNone);
 	
 	if(get_dynamic_font_size_value() == true)
 	{
@@ -526,7 +526,7 @@ static void blank_layer_update(struct Layer *me, GContext *ctx)
 	}
 	
 	GRect bounds = layer_get_bounds(me);
-	graphics_fill_rect(ctx, GRect(0, 0, bounds.size.w, bounds.size.h), 0, 0);
+	graphics_fill_rect(ctx, GRect(0, 0, bounds.size.w, bounds.size.h), 0, GCornerNone);
 }
 
 static void show_splash()
@@ -537,12 +537,12 @@ static void show_splash()
 	{
 		snprintf(layers[i].text, BUFFER_SIZE, "%s", splash_text[i]);
 	}
-	
+
 	is_splash_showing = true;
 	animation.current_flag = false;
 	animation.index = 0;
 	animation.is_animating = true;
-	timer = app_timer_register(SPLASH_DELAY, handle_timer, NULL);
+	//timer = app_timer_register(SPLASH_DELAY, handle_timer, NULL);
 }
 
 static void blink_screen()
@@ -582,8 +582,6 @@ static void get_time_value(struct tm *local)
 //        force a redraw of the the main screen since the minute tick may still be a while
 static void handle_timer(void *data)
 {
-	app_timer_cancel(timer);
-	
 	if(animation.index >= (int) sizeof(animation.flags)) 
 	{
 		if(animation.current_flag == true) 
@@ -597,6 +595,7 @@ static void handle_timer(void *data)
 		}
 		
 		animation.is_animating = false;
+		app_timer_cancel(timer);
 		
 		if(is_splash_showing == true) is_splash_showing = false;
 		
@@ -643,7 +642,7 @@ static void handle_timer(void *data)
 
 static void manual_handle_tick()
 {
-	blink_screen();
+	//blink_screen();
 }
 
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) 
@@ -734,6 +733,10 @@ static void window_unload(Window *window)
 	
 	layer_destroy(animation.blank_layer);
 	
+	for (int i = 0; i < LAYER_COUNT; i++)
+	{
+		layer_destroy(layers[i].layer);
+	}
 }
 
 static void window_load(Window *window) 
