@@ -5,15 +5,8 @@
 #include "calendar.h"
 #include "options.h"
 
-static Window *window;
-static AppTimer *timer;
-static struct tm *now;
-
-static int current_day;
-static bool is_holiday;
-
 static void handle_timer(void *data);
-	
+
 static bool get_holiday_text(int layer_id, char *text)
 {
 	if(current_day == now->tm_mday && is_holiday == false)
@@ -237,10 +230,8 @@ static bool get_holiday_text(int layer_id, char *text)
 	return is_holiday;
 }
 
-static bool check_text(Layer *me)
+static bool check_text(layer_info *me)
 {
-	layer_info *parent = container_of(me, layer_info, layer);
-	
 	int h = now->tm_hour;
 	int m = now->tm_min;
 
@@ -250,12 +241,12 @@ static bool check_text(Layer *me)
 		h = (h + 1) % 24;
 		
 		//we moved the hour forward, so force a refresh of the text
-		if(parent->id == LAYER_HOUR) parent->flag = 0;
+		if(me->id == LAYER_HOUR) me->flag = 0;
 	}
 	
 	#ifdef DEBUG
 		//if we're debugging, always refresh the hour layer (since we could be counting up or down)
-		if(parent->id == LAYER_HOUR) parent->flag = 0;
+		if(me->id == LAYER_HOUR) me->flag = 0;
 	#endif
 
 	int twelve_hour = h % 12;
@@ -264,160 +255,160 @@ static bool check_text(Layer *me)
 	bool is_holiday = false;
 	bool include_holiday = get_include_holiday_value();
 	
-	if (parent->id == LAYER_MINUTE)
+	if (me->id == LAYER_MINUTE)
 	{
 		if (m == 0) 
 		{
 			if(include_holiday == true)
-				is_holiday = get_holiday_text(parent->id, parent->text);
+				is_holiday = get_holiday_text(me->id, me->text);
 			
 			if(is_holiday == false)
-				snprintf(parent->text, BUFFER_SIZE, "%s", hour_text[twelve_hour]);
+				snprintf(me->text, BUFFER_SIZE, "%s", hour_text[twelve_hour]);
 		}
-		else if (first_half == true) snprintf(parent->text, BUFFER_SIZE, "%d minuto", m);
-		else snprintf(parent->text, BUFFER_SIZE, "%d minuto", 60 - m);
+		else if (first_half == true) snprintf(me->text, BUFFER_SIZE, "%d minuto", m);
+		else snprintf(me->text, BUFFER_SIZE, "%d minuto", 60 - m);
 	}
-	else if(parent->id == LAYER_MODIFIER)
+	else if(me->id == LAYER_MODIFIER)
 	{
-		if(m == 0 && parent->flag != 1)
+		if(m == 0 && me->flag != 1)
 		{
 			if(include_holiday == true)
-				is_holiday = get_holiday_text(parent->id, parent->text);
+				is_holiday = get_holiday_text(me->id, me->text);
 			
 			if(is_holiday == false)
-				snprintf(parent->text, BUFFER_SIZE, "%s", "na ng");
+				snprintf(me->text, BUFFER_SIZE, "%s", "na ng");
 			
-			parent->flag = 1;
+			me->flag = 1;
 		}
-		else if (m != 0 && first_half == true && parent->flag != 2)
+		else if (m != 0 && first_half == true && me->flag != 2)
 		{
-			snprintf(parent->text, BUFFER_SIZE, "makalipas ang");
-			parent->flag = 2;
+			snprintf(me->text, BUFFER_SIZE, "makalipas ang");
+			me->flag = 2;
 		}
-		else if (m != 0 && first_half == false && parent->flag != 3)
+		else if (m != 0 && first_half == false && me->flag != 3)
 		{
-			snprintf(parent->text, BUFFER_SIZE, "bago mag");
-			parent->flag = 3;
+			snprintf(me->text, BUFFER_SIZE, "bago mag");
+			me->flag = 3;
 		}
 		else
 		{
 			has_changed = false;
 		}
 	}
-	else if(parent->id == LAYER_HOUR)
+	else if(me->id == LAYER_HOUR)
 	{
 		//"minute == 0" text only happens once per hour
 		//and since the previous minute (minute == 59) is still under the same condition as the current hour,
 		//we need to reset the flag to force a refresh on the text
 		//this will then retrieve the "minute != 0" text	
-		if(m == 0) parent->flag = 0;
+		if(m == 0) me->flag = 0;
 		
-		if(h == 0 && parent->flag != 1) 
+		if(h == 0 && me->flag != 1) 
 		{
 			if(m == 0) 
 			{
 				if(include_holiday == true)
-					is_holiday = get_holiday_text(parent->id, parent->text);
+					is_holiday = get_holiday_text(me->id, me->text);
 			
 				if(is_holiday == false)
-					snprintf(parent->text, BUFFER_SIZE, "%s", "hating gabi");
+					snprintf(me->text, BUFFER_SIZE, "%s", "hating gabi");
 			}
 			else
 			{
-				snprintf(parent->text, BUFFER_SIZE, "%s ng hating gabi", hour_text[twelve_hour]);
+				snprintf(me->text, BUFFER_SIZE, "%s ng hating gabi", hour_text[twelve_hour]);
 			}
 			
-			parent->flag = 1;
+			me->flag = 1;
 		}
-		else if(h > 0 && h < 6 && parent->flag != 2) 
+		else if(h > 0 && h < 6 && me->flag != 2) 
 		{
 			if(m == 0) 
 			{
 				if(include_holiday == true)
-					is_holiday = get_holiday_text(parent->id, parent->text);
+					is_holiday = get_holiday_text(me->id, me->text);
 			
 				if(is_holiday == false)
-					snprintf(parent->text, BUFFER_SIZE, "%s", "madaling araw");
+					snprintf(me->text, BUFFER_SIZE, "%s", "madaling araw");
 			}
 			else
 			{
-				snprintf(parent->text, BUFFER_SIZE, "%s ng madaling araw", hour_text[twelve_hour]);
+				snprintf(me->text, BUFFER_SIZE, "%s ng madaling araw", hour_text[twelve_hour]);
 			}
 			
-			parent->flag = 2;
+			me->flag = 2;
 		}
-		else if(h >= 6 && h < 12 && parent->flag != 3)
+		else if(h >= 6 && h < 12 && me->flag != 3)
 		{
 			if(m == 0) 
 			{
 				if(include_holiday == true)
-					is_holiday = get_holiday_text(parent->id, parent->text);
+					is_holiday = get_holiday_text(me->id, me->text);
 			
 				if(is_holiday == false)
-					snprintf(parent->text, BUFFER_SIZE, "%s", "umaga");
+					snprintf(me->text, BUFFER_SIZE, "%s", "umaga");
 				else if(h == 9)
 					vibes_double_pulse();
 			}
 			else 
 			{
-				snprintf(parent->text, BUFFER_SIZE, "%s ng umaga", hour_text[twelve_hour]);
+				snprintf(me->text, BUFFER_SIZE, "%s ng umaga", hour_text[twelve_hour]);
 			}
 			
-			parent->flag = 3;
+			me->flag = 3;
 		}
-		else if(h == 12 && parent->flag != 4)
+		else if(h == 12 && me->flag != 4)
 		{
 			if(m == 0) 
 			{
 				if(include_holiday == true)
-					is_holiday = get_holiday_text(parent->id, parent->text);
+					is_holiday = get_holiday_text(me->id, me->text);
 			
 				if(is_holiday == false)
-					snprintf(parent->text, BUFFER_SIZE, "%s", "tanghali");
+					snprintf(me->text, BUFFER_SIZE, "%s", "tanghali");
 				else
 					vibes_double_pulse();
 			}
-			else snprintf(parent->text, BUFFER_SIZE, "%s ng tanghali", hour_text[twelve_hour]);
+			else snprintf(me->text, BUFFER_SIZE, "%s ng tanghali", hour_text[twelve_hour]);
 			
-			parent->flag = 4;
+			me->flag = 4;
 		}
-		else if(h > 12 && h < 18 && parent->flag != 5) 
+		else if(h > 12 && h < 18 && me->flag != 5) 
 		{
 			if(m == 0) 
 			{
 				if(include_holiday == true)
-					is_holiday = get_holiday_text(parent->id, parent->text);
+					is_holiday = get_holiday_text(me->id, me->text);
 			
 				if(is_holiday == false)
-					snprintf(parent->text, BUFFER_SIZE, "%s", "hapon");
+					snprintf(me->text, BUFFER_SIZE, "%s", "hapon");
 				else if(h == 15)
 					vibes_double_pulse();
 			}
 			else
 			{
-				snprintf(parent->text, BUFFER_SIZE, "%s ng hapon", hour_text[twelve_hour]);
+				snprintf(me->text, BUFFER_SIZE, "%s ng hapon", hour_text[twelve_hour]);
 			}
 			
-			parent->flag = 5;
+			me->flag = 5;
 		}
-		else if(h >= 18 && h < 24 && parent->flag != 6)
+		else if(h >= 18 && h < 24 && me->flag != 6)
 		{
 			if(m == 0)
 			{
 				if(include_holiday == true)
-					is_holiday = get_holiday_text(parent->id, parent->text);
+					is_holiday = get_holiday_text(me->id, me->text);
 			
 				if(is_holiday == false)
-					snprintf(parent->text, BUFFER_SIZE, "%s", "gabi");
+					snprintf(me->text, BUFFER_SIZE, "%s", "gabi");
 				else if(h == 18)
 					vibes_double_pulse();
 			}
 			else
 			{
-				snprintf(parent->text, BUFFER_SIZE, "%s ng gabi", hour_text[twelve_hour]);
+				snprintf(me->text, BUFFER_SIZE, "%s ng gabi", hour_text[twelve_hour]);
 			}
 			
-			parent->flag = 6;
+			me->flag = 6;
 		}
 		else
 		{
@@ -427,38 +418,28 @@ static bool check_text(Layer *me)
 		//also, the succeeding minute (minute == 1) is still under the same condition as minute == 0
 		//so we need to reset the flag to force a refresh on the text
 		//this will then retrieve the "minute != 0" text	
-		if(m == 0) parent->flag = 0;
+		if(m == 0) me->flag = 0;
 	}
 	else
 	{
-		snprintf(parent->text, BUFFER_SIZE, "%s", "May problema");
+		snprintf(me->text, BUFFER_SIZE, "%s", "May problema");
 	}
 	
 	return has_changed;
 }
 
-static void layer_update(struct Layer *me, GContext *ctx)
+static void layer_update(layer_info *me)
 {
-	(void) ctx;
-	
-	layer_info *parent = container_of(me, layer_info, layer);
-	
-	GRect bounds = layer_get_bounds(me);
-	const int width = bounds.size.w;
-	const int height = bounds.size.h;
-	
 	if(get_invert_screen_value() == true)
 	{
-		graphics_context_set_fill_color(ctx, GColorBlack);
-		graphics_context_set_text_color(ctx, GColorWhite);
+		text_layer_set_background_color(me->layer, GColorBlack);
+		text_layer_set_text_color(me->layer, GColorWhite);
 	}
 	else
 	{
-		graphics_context_set_fill_color(ctx, GColorWhite);
-		graphics_context_set_text_color(ctx, GColorBlack);
+		text_layer_set_background_color(me->layer, GColorWhite);
+		text_layer_set_text_color(me->layer, GColorBlack);
 	}
-	
-	graphics_fill_rect(ctx, GRect(0, 0, width, height), 0, GCornerNone);
 	
 	if(get_dynamic_font_size_value() == true)
 	{
@@ -467,66 +448,48 @@ static void layer_update(struct Layer *me, GContext *ctx)
 		//if the size is greater than the bounds of the layer,
 		//    go to the next largest font
 		//    this is the reason why the fonts are ordered in a descending manner on the font array
-		parent->font_size = 0;
+		me->font_size = 2;
 			
-		GSize content_size = 
-		graphics_text_layout_get_max_used_size
-		(
-			ctx, 
-			parent->text, 
-			fonts[parent->font_size], 
-			GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 
-			GTextOverflowModeWordWrap, 
-			GTextAlignmentCenter, 
-			NULL
-		);
+		//GSize content_size = 
+		//graphics_text_layout_get_max_used_size
+		//(
+		//	ctx, 
+		//	parent->text, 
+		//	fonts[parent->font_size], 
+		//	GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 
+		//	GTextOverflowModeWordWrap, 
+		//	GTextAlignmentCenter, 
+		//	NULL
+		//);
 	
-		while(content_size.w > width || content_size.h > height)
-		{
-			parent->font_size++;
-			content_size = 
-				graphics_text_layout_get_max_used_size
-				(
-					ctx, 
-					parent->text, 
-					fonts[parent->font_size], 
-					GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 
-					GTextOverflowModeWordWrap, 
-					GTextAlignmentCenter, 
-					NULL
-				);
-		}
+		//while(content_size.w > width || content_size.h > height)
+		//{
+		//	parent->font_size++;
+		//	content_size = 
+		//		graphics_text_layout_get_max_used_size
+		//		(
+		//			ctx, 
+		//			parent->text, 
+		//			fonts[parent->font_size], 
+		//			GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 
+		//			GTextOverflowModeWordWrap, 
+		//			GTextAlignmentCenter, 
+		//			NULL
+		//		);
+		//}
 	}
 	else
 	{
 		//show the second to the smallest font
-		parent->font_size = 2;
-	}
-	
-	graphics_draw_text(ctx, 
-					   parent->text, 
-					   fonts[parent->font_size],
-					   GRect(0, 0, width, height), 
-					   GTextOverflowModeWordWrap, 
-					   GTextAlignmentCenter,
-					   NULL);
-}
+		me->font_size = 2;
 
-static void blank_layer_update(struct Layer *me, GContext *ctx)
-{
-	if(get_invert_screen_value() == true)
-	{
-		graphics_context_set_fill_color(ctx, GColorBlack);
-		graphics_context_set_text_color(ctx, GColorWhite);
-	}
-	else
-	{
-		graphics_context_set_fill_color(ctx, GColorWhite);
-		graphics_context_set_text_color(ctx, GColorBlack);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "######### layer_update: done!!!!!!");
 	}
 	
-	GRect bounds = layer_get_bounds(me);
-	graphics_fill_rect(ctx, GRect(0, 0, bounds.size.w, bounds.size.h), 0, GCornerNone);
+	text_layer_set_text(me->layer, me->text);
+	text_layer_set_font(me->layer, fonts[me->font_size]);
+	text_layer_set_overflow_mode(me->layer, GTextOverflowModeWordWrap);
+	text_layer_set_text_alignment(me->layer, GTextAlignmentCenter);
 }
 
 static void show_splash()
@@ -535,14 +498,16 @@ static void show_splash()
 	
 	for (int i = 0; i < LAYER_COUNT; i++) 
 	{
+		layers[i].text = malloc(BUFFER_SIZE);
 		snprintf(layers[i].text, BUFFER_SIZE, "%s", splash_text[i]);
+		layer_update(&layers[i]);
 	}
 
 	is_splash_showing = true;
 	animation.current_flag = false;
 	animation.index = 0;
 	animation.is_animating = true;
-	//timer = app_timer_register(SPLASH_DELAY, handle_timer, NULL);
+	timer = app_timer_register(SPLASH_DELAY, handle_timer, NULL);
 }
 
 static void blink_screen()
@@ -586,11 +551,9 @@ static void handle_timer(void *data)
 	{
 		if(animation.current_flag == true) 
 		{
-			layer_remove_child_layers(window_get_root_layer(window));
-			
 			for (int i = 0; i < LAYER_COUNT; i++) 
 			{
-				layer_add_child(window_get_root_layer(window), layers[i].layer);
+				layer_set_hidden(text_layer_get_layer(layers[i].layer), false);
 			}
 		}
 		
@@ -606,10 +569,10 @@ static void handle_timer(void *data)
 		
 		for (int i = 0; i < LAYER_COUNT; i++) 
 		{
-			bool has_changed = check_text(layers[i].layer);
+			bool has_changed = check_text(&layers[i]);
 			if (has_changed == true) 
 			{
-				if (animation.is_animating == false) layer_mark_dirty(layers[i].layer);
+				if (animation.is_animating == false) layer_update(&layers[i]);
 			}
 		}
 		
@@ -619,20 +582,10 @@ static void handle_timer(void *data)
 	if(animation.current_flag != animation.flags[animation.index])
 	{
 		animation.current_flag = animation.flags[animation.index];
-			
-		if(animation.current_flag == true)
+		
+		for (int i = 0; i < LAYER_COUNT; i++) 
 		{
-			layer_remove_child_layers(window_get_root_layer(window));
-			layer_add_child(window_get_root_layer(window), animation.blank_layer);
-		}
-		else
-		{
-			layer_remove_child_layers(window_get_root_layer(window));
-			
-			for (int i = 0; i < LAYER_COUNT; i++) 
-			{
-				layer_add_child(window_get_root_layer(window), layers[i].layer);
-			}
+			layer_set_hidden(text_layer_get_layer(layers[i].layer), animation.current_flag);
 		}
 	}
 	
@@ -642,7 +595,7 @@ static void handle_timer(void *data)
 
 static void manual_handle_tick()
 {
-	//blink_screen();
+	blink_screen();
 }
 
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) 
@@ -697,23 +650,23 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 
 	void config_provider(ClickConfig **config, Window *window) 
 	{
-		//config[BUTTON_ID_UP]->click.handler = (ClickHandler) handle_up_single_click;
-		//config[BUTTON_ID_UP]->click.repeat_interval_ms = 250;
+		config[BUTTON_ID_UP]->click.handler = (ClickHandler) handle_up_single_click;
+		config[BUTTON_ID_UP]->click.repeat_interval_ms = 250;
 		
-		//config[BUTTON_ID_UP]->multi_click.handler = (ClickHandler) handle_up_multi_click;
-  		//config[BUTTON_ID_UP]->multi_click.min = 2;
-  		//config[BUTTON_ID_UP]->multi_click.max = 3;
-  		//config[BUTTON_ID_UP]->multi_click.last_click_only = true;
+		config[BUTTON_ID_UP]->multi_click.handler = (ClickHandler) handle_up_multi_click;
+  		config[BUTTON_ID_UP]->multi_click.min = 2;
+  		config[BUTTON_ID_UP]->multi_click.max = 3;
+  		config[BUTTON_ID_UP]->multi_click.last_click_only = true;
 		
-		//config[BUTTON_ID_DOWN]->click.handler = (ClickHandler) handle_down_single_click;
-		//config[BUTTON_ID_DOWN]->click.repeat_interval_ms = 250;	
+		config[BUTTON_ID_DOWN]->click.handler = (ClickHandler) handle_down_single_click;
+		config[BUTTON_ID_DOWN]->click.repeat_interval_ms = 250;	
 		
-		//config[BUTTON_ID_DOWN]->multi_click.handler = (ClickHandler) handle_down_multi_click;
-  		//config[BUTTON_ID_DOWN]->multi_click.min = 2;
-  		//config[BUTTON_ID_DOWN]->multi_click.max = 3;
-  		//config[BUTTON_ID_DOWN]->multi_click.last_click_only = true;
+		config[BUTTON_ID_DOWN]->multi_click.handler = (ClickHandler) handle_down_multi_click;
+  		config[BUTTON_ID_DOWN]->multi_click.min = 2;
+  		config[BUTTON_ID_DOWN]->multi_click.max = 3;
+  		config[BUTTON_ID_DOWN]->multi_click.last_click_only = true;
 		
-		//config[BUTTON_ID_SELECT]->click.handler = (ClickHandler) handle_select_single_click;
+		config[BUTTON_ID_SELECT]->click.handler = (ClickHandler) handle_select_single_click;
 	}
 #endif
 
@@ -731,11 +684,9 @@ static void window_unload(Window *window)
 		fonts_unload_custom_font(fonts[x]);
 	}
 	
-	layer_destroy(animation.blank_layer);
-	
 	for (int i = 0; i < LAYER_COUNT; i++)
 	{
-		layer_destroy(layers[i].layer);
+		text_layer_destroy(layers[i].layer);
 	}
 }
 
@@ -751,13 +702,16 @@ static void window_load(Window *window)
 		else if (x == 3) fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_20));
 		else fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_40));
 	}
-	
+
 	thincfg_init();
 	btmonitor_init(get_bt_notification_value());
 	
-	animation.blank_layer = layer_create(GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT));
-	layer_set_update_proc(animation.blank_layer, blank_layer_update);
-	
+	time_t temp;
+	time(&temp);
+	now = localtime(&temp);
+	current_day = 0;
+	is_holiday = false;
+
 	for (int i = 0; i < LAYER_COUNT; i++)
 	{
 		/*
@@ -779,18 +733,11 @@ static void window_load(Window *window)
 		else if(i == LAYER_HOUR) frame = GRect(0, (2 * SCREEN_HEIGHT / LAYER_COUNT) - 20, SCREEN_WIDTH, (SCREEN_HEIGHT / LAYER_COUNT) + 20);
 		else frame = GRect(0, i * (SCREEN_HEIGHT / LAYER_COUNT), SCREEN_WIDTH, (SCREEN_HEIGHT / LAYER_COUNT));
 		
-		layers[i].layer = layer_create(frame);
-		layer_set_update_proc(layers[i].layer, layer_update);
-		layer_add_child(window_get_root_layer(window), layers[i].layer);		
+		layers[i].layer = text_layer_create(frame);
+		layer_add_child(window_get_root_layer(window), text_layer_get_layer(layers[i].layer));
 		
 		layers[i].flag = 0;		
 	}
-	
-	time_t temp;
-	time(&temp);
-	now = localtime(&temp);
-	current_day = 0;
-	is_holiday = false;
 	
 	show_splash();
 }
@@ -825,3 +772,4 @@ int main(void)
 	app_event_loop();
 	handle_deinit();
 }
+

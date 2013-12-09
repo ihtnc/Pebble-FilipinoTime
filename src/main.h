@@ -11,12 +11,6 @@
 #define SCREEN_WIDTH 144
 	
 #define BUFFER_SIZE 32
-#define container_of(ptr, type, member) \
-	({ \
-		char *__mptr = (char *)(uintptr_t) (ptr); \
-		(type *)(__mptr - offsetof(type,member) ); \
-	 })
-
 
 #define FONT_COUNT 4
 GFont fonts[FONT_COUNT];
@@ -27,11 +21,18 @@ char *hour_text[12] =
 	"alas kwatro", "alas singko", "alas sais", "alas siyete", 
 	"alas otso", "alas nwebe", "alas diyes", "alas onse"
 };
-	
-typedef struct
+
+Window *window;
+AppTimer *timer;
+struct tm *now;
+
+int current_day;
+bool is_holiday;
+
+typedef struct 
 {
+	TextLayer *layer;
 	int id;
-	Layer *layer;
 	int flag;
 	int font_size;
 	char *text;
@@ -51,11 +52,10 @@ char *splash_text[LAYER_COUNT] =
 	"(c) 2013 FilipinoTime"
 };
 
-typedef struct
+typedef struct 
 {
 	bool is_animating;
 	uint32_t duration;
-	Layer *blank_layer;
 	bool flags[5];
 	bool current_flag;
 	int index;
@@ -71,3 +71,4 @@ blink_info animation =
 };
 
 bool is_splash_showing;
+
