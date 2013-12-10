@@ -8,6 +8,15 @@ static bool bt_notification;
 static bool invert_screen;
 static int count_up_cutover;
 
+static bool old_include_holiday;
+static bool old_enable_blink;
+static bool old_dynamic_font_size;
+static bool old_bt_notification;
+static bool old_invert_screen;
+static int old_count_up_cutover;
+
+static ThinCFGCallbacks cfgcallbacks;
+
 bool get_include_holiday_value(void) { return invert_screen; }
 bool get_enable_blink_value(void) { return enable_blink; }
 bool get_dynamic_font_size_value(void) { return dynamic_font_size; }
@@ -132,6 +141,13 @@ static void read_config()
 		APP_LOG(APP_LOG_LEVEL_DEBUG, warning);
 		#endif
 	}
+
+	old_include_holiday = include_holiday;
+	old_enable_blink = enable_blink;
+	old_dynamic_font_size = dynamic_font_size;
+	old_bt_notification = bt_notification;
+	old_invert_screen = invert_screen;
+	old_count_up_cutover = count_up_cutover;
 }
 
 static void in_dropped_handler(AppMessageResult reason, void *context) 
@@ -164,6 +180,12 @@ static void in_received_handler(DictionaryIterator *received, void *context)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "in_received_handler: include_holiday=false");
 		#endif
 	}
+
+	if(old_include_holiday != include_holiday && cfgcallbacks.field_changed)
+	{
+		cfgcallbacks.field_changed(CONFIG_KEY_INCLUDE_HOLIDAY, (void *)&old_include_holiday, (void *)&include_holiday);
+	}
+	old_include_holiday = include_holiday;
 	
 	Tuple *blink = dict_find(received, CONFIG_KEY_ENABLE_BLINK);
 	if(blink) 
@@ -187,6 +209,12 @@ static void in_received_handler(DictionaryIterator *received, void *context)
 		#endif
 	}
 	
+	if(old_enable_blink != enable_blink && cfgcallbacks.field_changed)
+	{
+		cfgcallbacks.field_changed(CONFIG_KEY_ENABLE_BLINK, (void *)&old_enable_blink, (void *)&enable_blink);
+	}
+	old_enable_blink = enable_blink;
+
 	Tuple *font = dict_find(received, CONFIG_KEY_DYNAMIC_FONT_SIZE);
 	if(font) 
 	{
@@ -209,6 +237,12 @@ static void in_received_handler(DictionaryIterator *received, void *context)
 		#endif
 	}
 	
+	if(old_dynamic_font_size != dynamic_font_size && cfgcallbacks.field_changed)
+	{
+		cfgcallbacks.field_changed(CONFIG_KEY_DYNAMIC_FONT_SIZE, (void *)&old_dynamic_font_size, (void *)&dynamic_font_size);
+	}
+	old_dynamic_font_size = dynamic_font_size;
+
 	Tuple *bt = dict_find(received, CONFIG_KEY_BT_NOTIFICATION);
 	if(bt) 
 	{
@@ -231,6 +265,12 @@ static void in_received_handler(DictionaryIterator *received, void *context)
 		#endif
 	}
 	
+	if(old_bt_notification != bt_notification && cfgcallbacks.field_changed)
+	{
+		cfgcallbacks.field_changed(CONFIG_KEY_BT_NOTIFICATION, (void *)&old_bt_notification, (void *)&bt_notification);
+	}
+	old_bt_notification = bt_notification;
+
 	Tuple *invert = dict_find(received, CONFIG_KEY_INVERT_SCREEN);
 	if(invert) 
 	{
@@ -253,6 +293,12 @@ static void in_received_handler(DictionaryIterator *received, void *context)
 		#endif
 	}
 	
+	if(old_invert_screen != invert_screen && cfgcallbacks.field_changed)
+	{
+		cfgcallbacks.field_changed(CONFIG_KEY_INVERT_SCREEN, (void *)&old_invert_screen, (void *)&invert_screen);
+	}
+	old_invert_screen = invert_screen;
+
 	Tuple *cutover = dict_find(received, CONFIG_KEY_COUNT_UP_CUTOVER);
 	if(cutover) 
 	{
@@ -265,13 +311,24 @@ static void in_received_handler(DictionaryIterator *received, void *context)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
 		#endif
 	}
+
+	if(old_count_up_cutover != count_up_cutover && cfgcallbacks.field_changed)
+	{
+		cfgcallbacks.field_changed(CONFIG_KEY_COUNT_UP_CUTOVER, (void *)&old_count_up_cutover, (void *)&count_up_cutover);
+	}
+	old_count_up_cutover = count_up_cutover;
 }
 
 static void app_message_init(void) 
 {
 	app_message_register_inbox_received(in_received_handler);
 	app_message_register_inbox_dropped(in_dropped_handler);
-	app_message_open(64, 64);
+	app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
+}
+
+void thincfg_subscribe(ThinCFGCallbacks callbacks)
+{
+	cfgcallbacks = callbacks;
 }
 
 void thincfg_init() 

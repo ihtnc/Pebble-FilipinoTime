@@ -4,22 +4,28 @@
 #define THINCFG
 
 #define DEFAULT_ENABLE_BLINK true
-#define DEFAULT_DYNAMIC_FONT_SIZE true
+#define DEFAULT_DYNAMIC_FONT_SIZE false
 #define DEFAULT_INCLUDE_HOLIDAY true
-#define DEFAULT_INVERT false
-#define DEFAULT_BT_NOTIFICATION false
+#define DEFAULT_INVERT true
+#define DEFAULT_BT_NOTIFICATION true
 #define DEFAULT_COUNT_UP_CUTOVER 40
 	
 enum 
 {
-	CONFIG_KEY_INCLUDE_HOLIDAY = 0,
-	CONFIG_KEY_ENABLE_BLINK = 1,
-	CONFIG_KEY_DYNAMIC_FONT_SIZE = 2,
-	CONFIG_KEY_BT_NOTIFICATION = 3,
-	CONFIG_KEY_INVERT_SCREEN = 4,
-	CONFIG_KEY_COUNT_UP_CUTOVER = 5,
-	CONFIG_KEY_ACTION = 6
+	CONFIG_KEY_INCLUDE_HOLIDAY = 29020,
+	CONFIG_KEY_ENABLE_BLINK = 29021,
+	CONFIG_KEY_DYNAMIC_FONT_SIZE = 29022,
+	CONFIG_KEY_BT_NOTIFICATION = 29023,
+	CONFIG_KEY_INVERT_SCREEN = 29024,
+	CONFIG_KEY_COUNT_UP_CUTOVER = 29025,
+	CONFIG_KEY_ACTION = 29026
 };
+
+typedef void(*ThinCFGFieldChangedHandler)(const uint32_t key, const void *old_value, const void *new_value);
+
+typedef struct {
+        ThinCFGFieldChangedHandler field_changed;
+} ThinCFGCallbacks;
 
 bool get_include_holiday_value(void);
 bool get_enable_blink_value(void);
@@ -30,5 +36,6 @@ int get_count_up_cutover_value(void);
 
 void thincfg_init(void);
 void thincfg_deinit(void);
+void thincfg_subscribe(ThinCFGCallbacks callback);
 	
 #endif

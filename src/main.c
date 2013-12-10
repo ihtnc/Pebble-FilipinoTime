@@ -230,7 +230,7 @@ static bool get_holiday_text(int layer_id, char *text)
 	return is_holiday;
 }
 
-static bool check_text(layer_info *me)
+static bool check_text(layer_info *me, bool force_refresh)
 {
 	int h = now->tm_hour;
 	int m = now->tm_min;
@@ -239,15 +239,12 @@ static bool check_text(layer_info *me)
 	if (first_half == false) 
 	{
 		h = (h + 1) % 24;
-		
+
 		//we moved the hour forward, so force a refresh of the text
 		if(me->id == LAYER_HOUR) me->flag = 0;
 	}
 	
-	#ifdef DEBUG
-		//if we're debugging, always refresh the hour layer (since we could be counting up or down)
-		if(me->id == LAYER_HOUR) me->flag = 0;
-	#endif
+	if(force_refresh == true && me->id == LAYER_HOUR) me->flag = 0;
 
 	int twelve_hour = h % 12;
 	
@@ -425,7 +422,7 @@ static bool check_text(layer_info *me)
 		snprintf(me->text, BUFFER_SIZE, "%s", "May problema");
 	}
 	
-	return has_changed;
+	return has_changed || force_refresh;
 }
 
 static void layer_update(layer_info *me)
@@ -482,8 +479,6 @@ static void layer_update(layer_info *me)
 	{
 		//show the second to the smallest font
 		me->font_size = 2;
-
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "######### layer_update: done!!!!!!");
 	}
 	
 	text_layer_set_text(me->layer, me->text);
@@ -510,20 +505,9 @@ static void show_splash()
 	timer = app_timer_register(SPLASH_DELAY, handle_timer, NULL);
 }
 
-static void blink_screen()
+static struct tm *get_time_value()
 {
-	if (get_enable_blink_value() == false) return;
-	if (animation.is_animating == true) return;
-	
-	animation.current_flag = false;
-	animation.index = 0;
-	animation.is_animating = true;
-	timer = app_timer_register(animation.duration, handle_timer, NULL);
-}
-
-static void get_time_value(struct tm *local)
-{
-	(void) local;
+	struct tm *local;
 	
 	#ifndef DEBUG
 		//time_t now;
@@ -537,6 +521,34 @@ static void get_time_value(struct tm *local)
 		local.tm_min = 59;
 		local.tm_hour = 8;
 	#endif
+
+	return local;
+}
+
+static void blink_screen()
+{
+	if (animation.is_animating == true) return;
+	
+	if (get_enable_blink_value() == false) 
+	{
+		now = get_time_value();
+		
+		for (int i = 0; i < LAYER_COUNT; i++) 
+		{
+			bool has_changed = check_text(&layers[i], false);
+			if (has_changed == true) 
+			{
+				if (animation.is_animating == false) layer_update(&layers[i]);
+			}
+		}
+	}
+	else
+	{	
+		animation.current_flag = false;
+		animation.index = 0;
+		animation.is_animating = true;
+		timer = app_timer_register(animation.duration, handle_timer, NULL);
+	}
 }
 
 //for each tick of the timer, walk through the flag list of the animation class
@@ -565,11 +577,11 @@ static void handle_timer(void *data)
 		//blink animation has just ended
 		//so draw the main watch face even if the minute did not tick yet
 		//this is to clear the previous screen and show the time immediately
-		get_time_value(now);
+		now = get_time_value();
 		
 		for (int i = 0; i < LAYER_COUNT; i++) 
 		{
-			bool has_changed = check_text(&layers[i]);
+			bool has_changed = check_text(&layers[i], false);
 			if (has_changed == true) 
 			{
 				if (animation.is_animating == false) layer_update(&layers[i]);
@@ -670,6 +682,26 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 	}
 #endif
 
+static void field_changed(const uint32_t key, const void *old_value, const void *new_value)
+{
+	for (int i = 0; i < LAYER_COUNT; i++) 
+	{
+		if (animation.is_animating == true) return;
+
+		if(key == CONFIG_KEY_COUNT_UP_CUTOVER)
+		{
+			check_text(&layers[i], true);
+		}
+
+		if(key == CONFIG_KEY_INVERT_SCREEN
+			|| key == CONFIG_KEY_COUNT_UP_CUTOVER
+			|| key == CONFIG_KEY_DYNAMIC_FONT_SIZE)
+		{
+			 layer_update(&layers[i]);
+		}
+	}
+}
+
 static void window_unload(Window *window) 
 {
 	thincfg_deinit();
@@ -678,7 +710,9 @@ static void window_unload(Window *window)
 	tick_timer_service_unsubscribe();
 	app_timer_cancel(timer);
 	free(timer);	
-	
+
+	free(now);
+
 	for (int x = 0; x < FONT_COUNT; x++)
 	{
 		fonts_unload_custom_font(fonts[x]);
@@ -687,13 +721,12 @@ static void window_unload(Window *window)
 	for (int i = 0; i < LAYER_COUNT; i++)
 	{
 		text_layer_destroy(layers[i].layer);
+		free(layers[i].layer);
 	}
 }
 
 static void window_load(Window *window) 
-{
-	tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
-	
+{	
 	for (int x = 0; x < FONT_COUNT; x++)
 	{
 		if (x == 0) fonts[x] = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CUTIEPATOOTIE_40));
@@ -704,11 +737,11 @@ static void window_load(Window *window)
 	}
 
 	thincfg_init();
+	thincfg_subscribe((ThinCFGCallbacks) { .field_changed = field_changed, });
+
 	btmonitor_init(get_bt_notification_value());
 	
-	time_t temp;
-	time(&temp);
-	now = localtime(&temp);
+	now = get_time_value();
 	current_day = 0;
 	is_holiday = false;
 
@@ -740,6 +773,8 @@ static void window_load(Window *window)
 	}
 	
 	show_splash();
+
+	tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);	
 }
 
 static void handle_init()
@@ -764,6 +799,7 @@ static void handle_init()
 static void handle_deinit()
 {
 	window_destroy(window);
+	free(window);
 }
 
 int main(void) 

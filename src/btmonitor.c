@@ -6,7 +6,7 @@ static bool is_connected;
 static uint8_t vibe_freq_count = 13;
 static uint8_t vibe_freq[] = {1, 1, 1, 1, 5, 5, 5, 5, 5, 30, 30, 30, 60};
 static uint8_t vibe_index = 0;
-static AppTimer *timer;
+static AppTimer *bt_timer;
 static BTMonitorCallbacks btcallbacks;
 	
 const VibePattern vibes_disconnect_pattern = 
@@ -47,7 +47,7 @@ static void app_timer_callback(void *context)
 			APP_LOG(APP_LOG_LEVEL_DEBUG, output);
 			#endif
 				
-			timer = app_timer_register(vibe_freq[vibe_index] * 60 * 1000, app_timer_callback, NULL);
+			bt_timer = app_timer_register(vibe_freq[vibe_index] * 60 * 1000, app_timer_callback, NULL);
 		}
 		
 		if(btcallbacks.ping)
@@ -81,12 +81,12 @@ static void bluetooth_connection_callback(bool connected)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
 		#endif
 			
-		timer = app_timer_register(vibe_freq[vibe_index] * 60 * 1000, 
-								   (AppTimerCallback)
-								   {
-									   app_timer_callback
-								   }, 
-								   NULL);
+		bt_timer = app_timer_register(vibe_freq[vibe_index] * 60 * 1000, 
+									 (AppTimerCallback)
+								   	 {
+										app_timer_callback
+								     }, 
+								     NULL);
 	}
 	else
 	{
@@ -127,5 +127,5 @@ void btmonitor_init()
 void btmonitor_deinit() 
 {
 	bluetooth_connection_service_unsubscribe();
-	free(timer);
+	free(bt_timer);
 }
