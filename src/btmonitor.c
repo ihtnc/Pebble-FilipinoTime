@@ -117,7 +117,6 @@ void btmonitor_subscribe(BTMonitorCallbacks callbacks)
 	btcallbacks = callbacks;
 }
 
-
 void btmonitor_init() 
 {		
 	bluetooth_connection_callback(bluetooth_connection_service_peek());	

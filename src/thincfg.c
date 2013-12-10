@@ -331,6 +331,11 @@ void thincfg_subscribe(ThinCFGCallbacks callbacks)
 	cfgcallbacks = callbacks;
 }
 
+void thincfg_unsubscribe()
+{
+	//
+}
+
 void thincfg_init() 
 {
     app_message_init();

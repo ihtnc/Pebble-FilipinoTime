@@ -37,5 +37,6 @@ int get_count_up_cutover_value(void);
 void thincfg_init(void);
 void thincfg_deinit(void);
 void thincfg_subscribe(ThinCFGCallbacks callback);
+void thincfg_unsubscribe(void);
 	
 #endif

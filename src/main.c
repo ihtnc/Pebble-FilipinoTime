@@ -704,6 +704,7 @@ static void field_changed(const uint32_t key, const void *old_value, const void 
 
 static void window_unload(Window *window) 
 {
+	thincfg_unsubscribe();
 	thincfg_deinit();
 	btmonitor_deinit();
 
