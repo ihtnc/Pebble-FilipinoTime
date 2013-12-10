@@ -1,4 +1,4 @@
-var enable_logging = true;
+var enable_logging = false;
 var include_holiday = 1;
 var enable_blink = 1;
 var dynamic_font_size = 1;
