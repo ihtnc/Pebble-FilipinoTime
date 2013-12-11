@@ -3,14 +3,12 @@
 
 static bool include_holiday;
 static bool enable_blink;
-static bool dynamic_font_size;
 static bool bt_notification;
 static bool invert_screen;
 static int count_up_cutover;
 
 static bool old_include_holiday;
 static bool old_enable_blink;
-static bool old_dynamic_font_size;
 static bool old_bt_notification;
 static bool old_invert_screen;
 static int old_count_up_cutover;
@@ -19,7 +17,6 @@ static ThinCFGCallbacks cfgcallbacks;
 
 bool get_include_holiday_value(void) { return invert_screen; }
 bool get_enable_blink_value(void) { return enable_blink; }
-bool get_dynamic_font_size_value(void) { return dynamic_font_size; }
 bool get_bt_notification_value(void) { return bt_notification; }
 bool get_invert_screen_value(void) { return invert_screen; }
 int get_count_up_cutover_value(void) { return count_up_cutover; }
@@ -61,25 +58,6 @@ static void read_config()
 		#ifdef ENABLE_LOGGING
 		if(DEFAULT_ENABLE_BLINK == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: enable_blink not configured. default=true");
 		else APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: enable_blink not configured. default=false");
-		#endif
-	}
-	
-	if (persist_exists(CONFIG_KEY_DYNAMIC_FONT_SIZE)) 
-	{
-		dynamic_font_size = persist_read_bool(CONFIG_KEY_DYNAMIC_FONT_SIZE);
-
-		#ifdef ENABLE_LOGGING
-		if(dynamic_font_size == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: dynamic_font_size=true");
-		else APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: dynamic_font_size=false");
-		#endif
-	}
-	else
-	{
-		dynamic_font_size = DEFAULT_DYNAMIC_FONT_SIZE; //default value
-
-		#ifdef ENABLE_LOGGING
-		if(DEFAULT_DYNAMIC_FONT_SIZE == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: dynamic_font_size not configured. default=true");
-		else APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: dynamic_font_size not configured. default=false");
 		#endif
 	}
 	
@@ -144,7 +122,6 @@ static void read_config()
 
 	old_include_holiday = include_holiday;
 	old_enable_blink = enable_blink;
-	old_dynamic_font_size = dynamic_font_size;
 	old_bt_notification = bt_notification;
 	old_invert_screen = invert_screen;
 	old_count_up_cutover = count_up_cutover;
@@ -214,34 +191,6 @@ static void in_received_handler(DictionaryIterator *received, void *context)
 		cfgcallbacks.field_changed(CONFIG_KEY_ENABLE_BLINK, (void *)&old_enable_blink, (void *)&enable_blink);
 	}
 	old_enable_blink = enable_blink;
-
-	Tuple *font = dict_find(received, CONFIG_KEY_DYNAMIC_FONT_SIZE);
-	if(font) 
-	{
-		persist_write_bool(CONFIG_KEY_DYNAMIC_FONT_SIZE, font->value->int32 == 1);
-		dynamic_font_size = (font->value->int32 == 1);
-
-		#ifdef ENABLE_LOGGING
-		if(dynamic_font_size == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "in_received_handler: dynamic_font_size=true");
-		else APP_LOG(APP_LOG_LEVEL_DEBUG, "in_received_handler: dynamic_font_size=false");
-		#endif
-	}
-	else
-	{
-		//since thinCFG won't pass fields that are not selected, we set the bt_notification to false if its key is not returned
-		persist_write_bool(CONFIG_KEY_DYNAMIC_FONT_SIZE, false);
-		dynamic_font_size = false;
-
-		#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "in_received_handler: dynamic_font_size=false");
-		#endif
-	}
-	
-	if(old_dynamic_font_size != dynamic_font_size && cfgcallbacks.field_changed)
-	{
-		cfgcallbacks.field_changed(CONFIG_KEY_DYNAMIC_FONT_SIZE, (void *)&old_dynamic_font_size, (void *)&dynamic_font_size);
-	}
-	old_dynamic_font_size = dynamic_font_size;
 
 	Tuple *bt = dict_find(received, CONFIG_KEY_BT_NOTIFICATION);
 	if(bt) 
@@ -346,3 +295,4 @@ void thincfg_deinit()
 {
 	app_message_deregister_callbacks();
 }
+

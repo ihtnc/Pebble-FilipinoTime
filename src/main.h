@@ -9,12 +9,31 @@
 	
 #define SCREEN_HEIGHT 168
 #define SCREEN_WIDTH 144
+
+#define JAN 0
+#define FEB 1
+#define MAR 2
+#define APR 3
+#define MAY 4
+#define JUN 5
+#define JUL 6
+#define AUG 7
+#define SEP 8
+#define OCT 9
+#define NOV 10
+#define DEC 11
 	
 #define BUFFER_SIZE 32
 
 #define FONT_COUNT 4
+#define FONT_SMALLEST 3
+#define FONT_SMALL 2
+#define FONT_MEDIUM 1
+#define FONT_LARGE 0
+	
 GFont fonts[FONT_COUNT];
 int current_font;
+
 char *hour_text[12] = 
 {
 	"alas dose", "ala una", "alas dos", "alas tres", 
@@ -28,6 +47,7 @@ struct tm *now;
 
 int current_day;
 bool is_holiday;
+bool is_splash_showing;
 
 typedef struct 
 {
@@ -40,9 +60,9 @@ typedef struct
 
 layer_info layers[LAYER_COUNT] =
 {
-	{ .id = LAYER_MINUTE, .flag = 0, .font_size = 0, .text = " " },
-	{ .id = LAYER_MODIFIER, .flag = 0, .font_size = 0, .text = " " },
-	{ .id = LAYER_HOUR, .flag = 0, .font_size = 0, .text = " " }
+	{ .id = LAYER_MINUTE, .flag = 0, .font_size = FONT_SMALLEST, .text = " " },
+	{ .id = LAYER_MODIFIER, .flag = 0, .font_size = FONT_SMALLEST, .text = " " },
+	{ .id = LAYER_HOUR, .flag = 0, .font_size = FONT_SMALLEST, .text = " " }
 };
 
 char *splash_text[LAYER_COUNT] = 
@@ -69,6 +89,3 @@ blink_info animation =
 	.is_animating = false,
 	.flags = {true, false, true, false, true}
 };
-
-bool is_splash_showing;
-

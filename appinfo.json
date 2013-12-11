@@ -2,13 +2,12 @@
     "versionLabel": "2.0",
     "uuid": "529e0e9d-5ea9-404c-94c1-42343d3b5f07",
     "appKeys": {
-        "DynamicFontSize": 29022,
-        "CountUpCutover": 29025,
+        "CountUpCutover": 29024,
         "IncludeHoliday": 29020,
-        "BTNotification": 29023,
+        "BTNotification": 29022,
         "EnableBlink": 29021,
-        "action": 29026,
-        "InvertScreen": 29024
+        "action": 29025,
+        "InvertScreen": 29023
     },
     "longName": "Pebble-FilipinoTime",
     "versionCode": 1,

@@ -2,7 +2,6 @@
 #include "main.h"
 #include "btmonitor.h"
 #include "thincfg.h"
-#include "calendar.h"
 #include "options.h"
 
 static void handle_timer(void *data);
@@ -252,6 +251,8 @@ static bool check_text(layer_info *me, bool force_refresh)
 	bool is_holiday = false;
 	bool include_holiday = get_include_holiday_value();
 	
+	me->font_size = FONT_MEDIUM;
+	
 	if (me->id == LAYER_MINUTE)
 	{
 		if (m == 0) 
@@ -260,7 +261,10 @@ static bool check_text(layer_info *me, bool force_refresh)
 				is_holiday = get_holiday_text(me->id, me->text);
 			
 			if(is_holiday == false)
+			{
 				snprintf(me->text, BUFFER_SIZE, "%s", hour_text[twelve_hour]);
+				me->font_size = FONT_SMALL;
+			}
 		}
 		else if (first_half == true) snprintf(me->text, BUFFER_SIZE, "%d minuto", m);
 		else snprintf(me->text, BUFFER_SIZE, "%d minuto", 60 - m);
@@ -281,6 +285,7 @@ static bool check_text(layer_info *me, bool force_refresh)
 		{
 			snprintf(me->text, BUFFER_SIZE, "makalipas ang");
 			me->flag = 2;
+			me->font_size = FONT_SMALL;
 		}
 		else if (m != 0 && first_half == false && me->flag != 3)
 		{
@@ -313,6 +318,7 @@ static bool check_text(layer_info *me, bool force_refresh)
 			else
 			{
 				snprintf(me->text, BUFFER_SIZE, "%s ng hating gabi", hour_text[twelve_hour]);
+				me->font_size = FONT_SMALL;
 			}
 			
 			me->flag = 1;
@@ -330,6 +336,7 @@ static bool check_text(layer_info *me, bool force_refresh)
 			else
 			{
 				snprintf(me->text, BUFFER_SIZE, "%s ng madaling araw", hour_text[twelve_hour]);
+				me->font_size = FONT_SMALL;
 			}
 			
 			me->flag = 2;
@@ -365,7 +372,10 @@ static bool check_text(layer_info *me, bool force_refresh)
 				else
 					vibes_double_pulse();
 			}
-			else snprintf(me->text, BUFFER_SIZE, "%s ng tanghali", hour_text[twelve_hour]);
+			else 
+			{
+				snprintf(me->text, BUFFER_SIZE, "%s ng tanghali", hour_text[twelve_hour]);
+			}
 			
 			me->flag = 4;
 		}
@@ -384,6 +394,7 @@ static bool check_text(layer_info *me, bool force_refresh)
 			else
 			{
 				snprintf(me->text, BUFFER_SIZE, "%s ng hapon", hour_text[twelve_hour]);
+				me->font_size = FONT_SMALL;
 			}
 			
 			me->flag = 5;
@@ -420,6 +431,7 @@ static bool check_text(layer_info *me, bool force_refresh)
 	else
 	{
 		snprintf(me->text, BUFFER_SIZE, "%s", "May problema");
+		me->font_size = FONT_SMALL;
 	}
 	
 	return has_changed || force_refresh;
@@ -438,49 +450,6 @@ static void layer_update(layer_info *me)
 		text_layer_set_text_color(me->layer, GColorBlack);
 	}
 	
-	if(get_dynamic_font_size_value() == true)
-	{
-		//start with the largest font
-		//try to calculate the resulting size of the layer given the text and the font
-		//if the size is greater than the bounds of the layer,
-		//    go to the next largest font
-		//    this is the reason why the fonts are ordered in a descending manner on the font array
-		me->font_size = 2;
-			
-		//GSize content_size = 
-		//graphics_text_layout_get_max_used_size
-		//(
-		//	ctx, 
-		//	parent->text, 
-		//	fonts[parent->font_size], 
-		//	GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 
-		//	GTextOverflowModeWordWrap, 
-		//	GTextAlignmentCenter, 
-		//	NULL
-		//);
-	
-		//while(content_size.w > width || content_size.h > height)
-		//{
-		//	parent->font_size++;
-		//	content_size = 
-		//		graphics_text_layout_get_max_used_size
-		//		(
-		//			ctx, 
-		//			parent->text, 
-		//			fonts[parent->font_size], 
-		//			GRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 
-		//			GTextOverflowModeWordWrap, 
-		//			GTextAlignmentCenter, 
-		//			NULL
-		//		);
-		//}
-	}
-	else
-	{
-		//show the second to the smallest font
-		me->font_size = 2;
-	}
-	
 	text_layer_set_text(me->layer, me->text);
 	text_layer_set_font(me->layer, fonts[me->font_size]);
 	text_layer_set_overflow_mode(me->layer, GTextOverflowModeWordWrap);
@@ -495,6 +464,10 @@ static void show_splash()
 	{
 		layers[i].text = malloc(BUFFER_SIZE);
 		snprintf(layers[i].text, BUFFER_SIZE, "%s", splash_text[i]);
+		
+		if(i == LAYER_MODIFIER) layers[i].font_size = FONT_LARGE;
+		else layers[i].font_size = FONT_SMALLEST;
+		
 		layer_update(&layers[i]);
 	}
 
@@ -507,22 +480,10 @@ static void show_splash()
 
 static struct tm *get_time_value()
 {
-	struct tm *local;
+	time_t temp;
+	time(&temp);
 	
-	#ifndef DEBUG
-		//time_t now;
-		time_t temp;
-		time(&temp);
-		local = localtime(&temp);
-	#else
-		local.tm_year = 113;
-		local.tm_mon = DEC;
-		local.tm_mday = 30;
-		local.tm_min = 59;
-		local.tm_hour = 8;
-	#endif
-
-	return local;
+	return localtime(&temp);
 }
 
 static void blink_screen()
@@ -614,73 +575,9 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 {
 	if(is_splash_showing == true) return;
 			
-	#ifndef DEBUG
-		now = tick_time;
-		manual_handle_tick();
-	#endif
+	now = tick_time;
+	manual_handle_tick();
 }
-
-#ifdef DEBUG
-	
-	void handle_up_single_click(ClickRecognizerRef recognizer, Window *window) 
-	{	
-		add_minutes(1);
-		manual_handle_tick();
-	}
-	
-	void handle_up_multi_click(ClickRecognizerRef recognizer, Window *window) 
-	{
-		const uint16_t count = click_number_of_clicks_counted(recognizer);
-		if(count == 2) add_hours(1);
-		else if(count == 3) add_days(1);
-		else add_minutes(1);
-		
-		manual_handle_tick();
-	}
-
-	void handle_select_single_click(ClickRecognizerRef recognizer, Window *window) 
-	{
-		get_time(&now);
-		manual_handle_tick();
-	}
-	
-	void handle_down_single_click(ClickRecognizerRef recognizer, Window *window) 
-	{			
-		add_minutes(-1);
-		manual_handle_tick();
-	}
-
-	void handle_down_multi_click(ClickRecognizerRef recognizer, Window *window) 
-	{
-		const uint16_t count = click_number_of_clicks_counted(recognizer);
-		if(count == 2) add_hours(-1);
-		else if(count == 3) add_days(-1);
-		else add_minutes(-1);
-		
-		manual_handle_tick();
-	}
-
-	void config_provider(ClickConfig **config, Window *window) 
-	{
-		config[BUTTON_ID_UP]->click.handler = (ClickHandler) handle_up_single_click;
-		config[BUTTON_ID_UP]->click.repeat_interval_ms = 250;
-		
-		config[BUTTON_ID_UP]->multi_click.handler = (ClickHandler) handle_up_multi_click;
-  		config[BUTTON_ID_UP]->multi_click.min = 2;
-  		config[BUTTON_ID_UP]->multi_click.max = 3;
-  		config[BUTTON_ID_UP]->multi_click.last_click_only = true;
-		
-		config[BUTTON_ID_DOWN]->click.handler = (ClickHandler) handle_down_single_click;
-		config[BUTTON_ID_DOWN]->click.repeat_interval_ms = 250;	
-		
-		config[BUTTON_ID_DOWN]->multi_click.handler = (ClickHandler) handle_down_multi_click;
-  		config[BUTTON_ID_DOWN]->multi_click.min = 2;
-  		config[BUTTON_ID_DOWN]->multi_click.max = 3;
-  		config[BUTTON_ID_DOWN]->multi_click.last_click_only = true;
-		
-		config[BUTTON_ID_SELECT]->click.handler = (ClickHandler) handle_select_single_click;
-	}
-#endif
 
 static void field_changed(const uint32_t key, const void *old_value, const void *new_value)
 {
@@ -694,8 +591,7 @@ static void field_changed(const uint32_t key, const void *old_value, const void 
 		}
 
 		if(key == CONFIG_KEY_INVERT_SCREEN
-			|| key == CONFIG_KEY_COUNT_UP_CUTOVER
-			|| key == CONFIG_KEY_DYNAMIC_FONT_SIZE)
+			|| key == CONFIG_KEY_COUNT_UP_CUTOVER)
 		{
 			 layer_update(&layers[i]);
 		}
@@ -718,9 +614,10 @@ static void window_unload(Window *window)
 	{
 		fonts_unload_custom_font(fonts[x]);
 	}
-	
+		
 	for (int i = 0; i < LAYER_COUNT; i++)
 	{
+		layer_remove_from_parent(text_layer_get_layer(layers[i].layer));
 		text_layer_destroy(layers[i].layer);
 		free(layers[i].layer);
 	}
@@ -787,20 +684,13 @@ static void handle_init()
 								   .load = window_load,
 								   .unload = window_unload,
 							   });
-	window_set_background_color(window, GColorBlack);
-	
-	#ifdef DEBUG
-		window_set_fullscreen(window, true);
-		//window_set_click_config_provider(window, (ClickConfigProvider) config_provider);
-	#endif
-		
+	window_set_background_color(window, GColorBlack);		
 	window_stack_push(window, true);
 }
 
 static void handle_deinit()
 {
 	window_destroy(window);
-	free(window);
 }
 
 int main(void) 
@@ -809,4 +699,5 @@ int main(void)
 	app_event_loop();
 	handle_deinit();
 }
+
 

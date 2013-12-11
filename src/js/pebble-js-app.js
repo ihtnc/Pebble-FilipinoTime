@@ -1,7 +1,6 @@
 var enable_logging = false;
 var include_holiday = 1;
 var enable_blink = 1;
-var dynamic_font_size = 1;
 var bt_notification = 0;
 var invert_screen = 0;
 var count_up_cutover = 40;
@@ -25,16 +24,6 @@ Pebble.addEventListener("ready", function() {
 	}
 	else {
 		if(enable_logging) console.log("Pebble.ready: default EnableBlink=" + enable_blink);
-	}
-
-	var temp_font = localStorage.getItem("DynamicFontSize");
-	if (temp_font) { 
-		dynamic_font_size = temp_font; 
-		
-		if(enable_logging) console.log("Pebble.ready: DynamicFontSize=" + dynamic_font_size);
-	}
-	else {
-		if(enable_logging) console.log("Pebble.ready: default DynamicFontSize=" + dynamic_font_size);
 	}
 
 	var temp_bt = localStorage.getItem("BTNotification");
@@ -81,12 +70,6 @@ Pebble.addEventListener("showConfiguration", function(e) {
 				"'caption':'Blink on Change'," +
 				"'key':'EnableBlink'," +
 				"'initialValue':'" + enable_blink + "'," +
-				"'type':'checkbox'" +
-			"}," +
-			"{" +
-				"'caption':'Autofit Text'," +
-				"'key':'DynamicFontSize'," +
-				"'initialValue':'" + dynamic_font_size + "'," +
 				"'type':'checkbox'" +
 			"}," +
 			"{" +
@@ -143,12 +126,6 @@ Pebble.addEventListener("webviewclosed", function(e) {
 
 	localStorage.setItem("EnableBlink", enable_blink);
 	if(enable_logging) console.log("Pebble.webviewclosed: enable_blink=" + enable_blink);
-
-	if(configuration["DynamicFontSize"] == null) dynamic_font_size = 0;
-	else dynamic_font_size = configuration["DynamicFontSize"];
-
-	localStorage.setItem("DynamicFontSize", dynamic_font_size);
-	if(enable_logging) console.log("Pebble.webviewclosed: dynamic_font_size=" + dynamic_font_size);
 	
 	if(configuration["BTNotification"] == null) bt_notification = 0;
 	else bt_notification = configuration["BTNotification"];
@@ -169,7 +146,6 @@ Pebble.addEventListener("webviewclosed", function(e) {
 	//since thinCFG returne everything as string, convert the values we retrieved to int before sending to the pebble watchface
 	configuration["IncludeHoliday"] = parseInt(include_holiday);
 	configuration["EnableBlink"] = parseInt(enable_blink);
-	configuration["DynamicFontSize"] = parseInt(dynamic_font_size);
 	configuration["BTNotification"] = parseInt(bt_notification);
 	configuration["InvertScreen"] = parseInt(invert_screen);
 	configuration["CountUpCutover"] = parseInt(count_up_cutover);
@@ -177,3 +153,4 @@ Pebble.addEventListener("webviewclosed", function(e) {
 	
 	if(enable_logging) console.log("Pebble.sendAppMessage: done");
 });
+
