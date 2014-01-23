@@ -28,12 +28,12 @@ Pebble.addEventListener("ready", function() {
 
 	var temp_bt = localStorage.getItem("BTNotification");
 	if (temp_bt) { 
-		bt = temp_bt; 
+		bt_notification = temp_bt; 
 		
-		if(enable_logging) console.log("Pebble.ready: BTNotification=" + bt);
+		if(enable_logging) console.log("Pebble.ready: BTNotification=" + bt_notification);
 	}
 	else {
-		if(enable_logging) console.log("Pebble.ready: default BTNotification=" + bt);
+		if(enable_logging) console.log("Pebble.ready: default BTNotification=" + bt_notification);
 	}
 
 	var temp_invert = localStorage.getItem("InvertScreen");
@@ -108,47 +108,47 @@ Pebble.addEventListener("webviewclosed", function(e) {
 	}
 
 	var configuration = JSON.parse(e.response);
-	if(configuration["action"] == "cancel") {
+	if(configuration.action == "cancel") {
 		if(enable_logging) console.log("Pebble.webviewclosed: action=cancel");
 		return;
 	}
 	
 	if(enable_logging) console.log("Pebble.webviewclosed: action=save");
 
-	if(configuration["IncludeHoliday"] == null) include_holiday = 0;
-	else include_holiday = configuration["IncludeHoliday"];
+	if(configuration.IncludeHoliday === null) include_holiday = 0;
+	else include_holiday = configuration.IncludeHoliday;
 	
 	localStorage.setItem("IncludeHoliday", include_holiday);
 	if(enable_logging) console.log("Pebble.webviewclosed: include_holiday=" + include_holiday);
 
-	if(configuration["EnableBlink"] == null) enable_blink = 0;
-	else enable_blink = configuration["EnableBlink"];
+	if(configuration.EnableBlink === null) enable_blink = 0;
+	else enable_blink = configuration.EnableBlink;
 
 	localStorage.setItem("EnableBlink", enable_blink);
 	if(enable_logging) console.log("Pebble.webviewclosed: enable_blink=" + enable_blink);
 	
-	if(configuration["BTNotification"] == null) bt_notification = 0;
-	else bt_notification = configuration["BTNotification"];
+	if(configuration.BTNotification === null) bt_notification = 0;
+	else bt_notification = configuration.BTNotification;
 
 	localStorage.setItem("BTNotification", bt_notification);
 	if(enable_logging) console.log("Pebble.webviewclosed: bt_notification=" + bt_notification);	
 
-	if(configuration["InvertScreen"] == null) invert_screen = 0;
-	else invert_screen = configuration["InvertScreen"];
+	if(configuration.InvertScreen === null) invert_screen = 0;
+	else invert_screen = configuration.InvertScreen;
 
 	localStorage.setItem("InvertScreen", invert_screen);
 	if(enable_logging) console.log("Pebble.webviewclosed: invert_screen=" + invert_screen);	
 
-	if(configuration["CountUpCutover"] != null) count_up_cutover = configuration["CountUpCutover"];
+	if(configuration.CountUpCutover !== null) count_up_cutover = configuration.CountUpCutover;
 	localStorage.setItem("CountUpCutover", count_up_cutover);
 	if(enable_logging) console.log("Pebble.webviewclosed: count_up_cutover=" + count_up_cutover);	
 
 	//since thinCFG returne everything as string, convert the values we retrieved to int before sending to the pebble watchface
-	configuration["IncludeHoliday"] = parseInt(include_holiday);
-	configuration["EnableBlink"] = parseInt(enable_blink);
-	configuration["BTNotification"] = parseInt(bt_notification);
-	configuration["InvertScreen"] = parseInt(invert_screen);
-	configuration["CountUpCutover"] = parseInt(count_up_cutover);
+	configuration.IncludeHoliday = parseInt(include_holiday);
+	configuration.EnableBlink = parseInt(enable_blink);
+	configuration.BTNotification = parseInt(bt_notification);
+	configuration.InvertScreen = parseInt(invert_screen);
+	configuration.CountUpCutover = parseInt(count_up_cutover);
 	Pebble.sendAppMessage(configuration);
 	
 	if(enable_logging) console.log("Pebble.sendAppMessage: done");
